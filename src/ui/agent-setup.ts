@@ -44,12 +44,12 @@ function sameBase(a: unknown, b: unknown): boolean {
   return Boolean(a) && norm(a) === norm(b);
 }
 
-export function renderAgentSetup(container: HTMLElement, deps: AgentSetupDeps, options: { onChange?: () => void; skills?: boolean } = {}): AgentSetupHandle {
+export function renderAgentSetup(container: HTMLElement, deps: AgentSetupDeps, options: { onChange?: () => void; skills?: boolean; autoInstallSkills?: boolean } = {}): AgentSetupHandle {
   const root = h(container, "div", { cls: "rd-agent-setup" });
   let providers: ProviderPreset[] | null = null, servers: LocalServer[] = [], hasKey = false, disposed = false;
   let testState: { status: "idle" | "running" | "ok" | "error"; text: string } = { status: "idle", text: "" };
   let apiOpen = false;
-  let skills: SkillTarget[] | null = null, skillError = "", skillBusy = false;
+  let skills: SkillTarget[] | null = null, skillError = "", skillBusy = false, autoInstalled: string[] = [];
   const showSkills = options.skills !== false && typeof deps.skillStatus === "function";
 
   const current = () => {
@@ -182,6 +182,7 @@ export function renderAgentSetup(container: HTMLElement, deps: AgentSetupDeps, o
     h(box, "strong", { text: "Use Monitoring Anything from your agent" });
     h(box, "p", { cls: "rd-caption", text: "Adds a skill so Claude Code and Codex can set up monitoring, report progress and manage milestones when you ask them in a chat. New connections still open here for you to confirm." });
     if (!skills) { h(box, "p", { cls: "rd-caption", text: skillError || "Checking…" }); return; }
+    if (autoInstalled.length) h(box, "p", { cls: "rd-agent-status is-ok", text: `Installed for ${autoInstalled.join(" and ")}. Remove it below if you'd rather not.` });
     const runSkill = async (work: () => Promise<SkillTarget[]>) => {
       skillBusy = true; skillError = ""; render();
       try { skills = await work(); } catch (error) { skillError = errorMessage(error); }
@@ -235,7 +236,15 @@ export function renderAgentSetup(container: HTMLElement, deps: AgentSetupDeps, o
     await refreshKey();
     render();
     if (showSkills) {
-      try { skills = await deps.skillStatus!(); } catch (error) { skillError = errorMessage(error); }
+      try {
+        skills = await deps.skillStatus!();
+        /* First run: install the skill for every agent found that has none yet (Remove undoes it). */
+        const missing = options.autoInstallSkills && deps.installSkill ? skills.filter(item => item.agentPresent && item.state === "missing") : [];
+        if (missing.length) {
+          skills = await deps.installSkill!(missing.map(item => item.agent), false);
+          autoInstalled = missing.map(item => item.title);
+        }
+      } catch (error) { skillError = errorMessage(error); }
       if (!disposed) render();
     }
   }

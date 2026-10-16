@@ -399,6 +399,28 @@ describe("agent setup", () => {
     card.dispose();
   });
 
+  it("installs the skill on first run for agents found without one, and says so", async () => {
+    type Target = import("../src/ui/agent-setup").SkillTarget;
+    let targets: Target[] = [
+      { agent: "claude", title: "Claude Code", folder: "C:/Users/me/.claude/skills/monitoring-anything", agentPresent: true, state: "missing" },
+      { agent: "codex", title: "Codex", folder: "C:/Users/me/.codex/skills/monitoring-anything", agentPresent: true, state: "foreign" },
+    ];
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const deps: AgentSetupDeps = {
+      providers: async () => presets, servers: async () => [], settings: () => normalizeAgentSettings({}), save: async () => {}, keyStatus: async () => false,
+      setKey: vi.fn(), test: vi.fn(), openUrl: vi.fn(), skillStatus: async () => targets,
+      installSkill: vi.fn(async (agents: string[]) => (targets = targets.map(t => agents.includes(t.agent) ? { ...t, state: "installed" as const } : t))),
+      uninstallSkill: vi.fn(async () => targets),
+    };
+    const handle = renderAgentSetup(container, deps, { autoInstallSkills: true });
+    await until(() => container.querySelector(".rd-agent-skill .rd-agent-status.is-ok"));
+    expect(deps.installSkill).toHaveBeenCalledWith(["claude"], false);
+    expect(container.querySelector(".rd-agent-skill .rd-agent-status")!.textContent).toBe("Installed for Claude Code. Remove it below if you'd rather not.");
+    expect(Array.from(container.querySelectorAll(".rd-agent-skill button")).map(node => node.textContent)).toEqual(["Remove"]);
+    handle.dispose();
+  });
+
   it("asks for an agent on the plan card before Smart monitoring when none can run", async () => {
     let ready = false;
     const fake = host({ agentReady: vi.fn(async () => ready), mountAgentSetup: vi.fn().mockReturnValue({ ready: async () => ready, dispose: () => {} }) });

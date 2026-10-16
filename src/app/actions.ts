@@ -126,7 +126,7 @@ export class AppActions implements ActionBridge {
     modal.description(options.firstRun
       ? "Smart monitoring lets an agent design how a project folder is monitored. Pick the agent once; it only reads file names and short excerpts, never writes or runs anything. You can change this later in Settings → Agent."
       : "The agent designs monitoring plans when you choose Smart monitoring. It only reads file names and short excerpts, never writes or runs anything.");
-    const setup = renderAgentSetup(modal.contentEl, this.agentSetupDeps());
+    const setup = renderAgentSetup(modal.contentEl, this.agentSetupDeps(), { autoInstallSkills: options.firstRun });
     const row = buttons(modal.contentEl);
     const finish = () => { setup.dispose(); modal.close(); };
     if (options.firstRun) button(row, "Skip for now", finish);

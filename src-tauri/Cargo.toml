@@ -3,7 +3,7 @@ name = "monitoring-anything"
 version = "0.1.1"
 description = "Monitoring Anything: projects, milestones and live progress monitoring"
 authors = ["Yang"]
-license = "MIT"
+license = "GPL-3.0-only"
 edition = "2021"
 rust-version = "1.77"
 

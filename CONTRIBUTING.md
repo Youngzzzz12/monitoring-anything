@@ -10,4 +10,4 @@ Thanks for your interest. The project is at an early stage (0.1.0); issues and f
   upstream should say so in the pull request.
 - Never make the app or collector write to, compile or run anything inside a monitored source folder.
 
-By contributing you agree that your contributions are licensed under the MIT License.
+By contributing you agree that your contributions are licensed under the GNU General Public License v3.0.

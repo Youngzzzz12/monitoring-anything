@@ -124,8 +124,11 @@ npm run tauri build     # installers in src-tauri/target/release/bundle/
 
 `src/` is the interface (TypeScript), `src-tauri/` the desktop shell (Rust), `collector/` the Python collector that
 reads folders, `skill/` the agent skill. `dev/demo.html` (with `npm run dev`) shows the app with made-up projects;
-the screenshots come from it. Workspace file formats: [`schemas/README.md`](schemas/README.md).
+the screenshots come from it: `npm run demo:media` captures the screenshots and recordings (Chrome, through
+playwright-core), `npm run demo:gifs` turns the recordings into GIFs (Python with Pillow), and `npm run demo:connect`
+refreshes the plan card's demo data from the collector. Workspace file formats: [`schemas/README.md`](schemas/README.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Yang
+[GNU General Public License v3.0](LICENSE) © 2026 Yang. You may use, study, share and change it; versions you
+distribute, changed or not, must stay under the GPL with their source available.

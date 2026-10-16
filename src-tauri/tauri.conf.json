@@ -35,8 +35,8 @@
     "category": "Productivity",
     "shortDescription": "Monitor the progress of anything you work on",
     "longDescription": "Projects, milestones and live progress of papers, Word manuscripts, simulations and training runs, with a floating desktop widget.",
-    "copyright": "Copyright (c) 2026 Yang. MIT License.",
-    "license": "MIT",
+    "copyright": "Copyright (c) 2026 Yang. Licensed under the GNU GPL v3.",
+    "license": "GPL-3.0-only",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -40,6 +40,9 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build unsigned bundles
         run: npm run tauri build
+      - name: Sign, check and compress the macOS app
+        if: runner.os == 'macOS'
+        run: node scripts/macos-package.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: monitoring-anything-${{ matrix.platform }}

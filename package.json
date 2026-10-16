@@ -15,7 +15,8 @@
     "python:fetch": "node scripts/fetch-python.mjs",
     "demo:connect": "python scripts/demo-connect.py",
     "demo:media": "node scripts/demo-media.mjs",
-    "demo:gifs": "python scripts/demo-gifs.py"
+    "demo:gifs": "python scripts/demo-gifs.py",
+    "package:macos": "node scripts/macos-package.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

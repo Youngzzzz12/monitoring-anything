@@ -10,7 +10,7 @@ import { errorMessage } from "../model/rules";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { mountView, type ActionBridge, type BridgeStatus } from "../view/view";
 import { h } from "../ui/modal";
-import { api } from "./api";
+import { api, type OrbLayout } from "./api";
 import { addMilestoneTo, deleteMilestoneIn, editMilestoneIn, setMilestoneIn } from "./milestone-writes";
 import { notice } from "../ui/notice";
 import type { Store } from "./store";
@@ -85,6 +85,83 @@ class IdleFade {
   }
 }
 
+/* The widget as a circle (Shrink in the top bar): just the completion ring. Hovering opens the breakdown beside it: the
+ * window grows on the side with room and the Rust side keeps the circle where it is. A click opens the full widget
+ * again; a drag moves the circle anywhere (its place is remembered). */
+const ORB = { size: 72, gap: 6, drag: 4, close: 200 };
+
+export class OrbControl {
+  private open = false;
+  private seq = 0;
+  private press: { x: number; y: number; dragging: boolean } | null = null;
+
+  constructor(private frame: HTMLElement, private expand: () => void, private shape: typeof api.widgetShape = api.widgetShape) {
+    const onDial = (event: Event) => Boolean((event.target as Element | null)?.closest?.(".rd-orb-dial"));
+    frame.addEventListener("pointerdown", event => {
+      if (event.button === 0 && onDial(event)) this.press = { x: event.screenX, y: event.screenY, dragging: false };
+    });
+    frame.addEventListener("pointermove", event => {
+      const press = this.press;
+      if (press && !press.dragging && Math.hypot(event.screenX - press.x, event.screenY - press.y) > ORB.drag) {
+        press.dragging = true;
+        /* The page gets no pointerup after a native window drag; the call returns when the drag ends. */
+        void getCurrentWindow().startDragging().catch(() => {}).finally(() => { if (this.press === press) this.press = null; });
+      }
+      if (onDial(event)) void this.show();
+    }, { passive: true });
+    window.addEventListener("pointerup", event => {
+      const press = this.press;
+      this.press = null;
+      if (press && !press.dragging && onDial(event)) this.expand();
+    });
+    /* Keyboard (Enter or Space on the focused circle) arrives as a click without a pointer press. */
+    frame.addEventListener("click", event => { if (onDial(event) && (event as MouseEvent).detail === 0) this.expand(); });
+  }
+
+  /** The window-frame signal from Rust (`widget://pointer`). */
+  pointer(inside: boolean) { if (inside) void this.show(); else this.hide(); }
+
+  async show() {
+    if (this.open || this.press?.dragging) return;
+    const flyout = this.frame.querySelector<HTMLElement>(".rd-orb-flyout");
+    if (!flyout) return;
+    this.open = true;
+    const seq = ++this.seq;
+    const layout = await this.shape("flyout", [flyout.offsetWidth, flyout.offsetHeight]).catch(() => null);
+    if (!layout || seq !== this.seq) return;
+    this.apply(layout);
+    this.frame.classList.add("is-flyout-open");
+  }
+
+  hide() {
+    if (!this.open) return;
+    this.open = false;
+    const seq = ++this.seq;
+    this.frame.classList.remove("is-flyout-open");
+    window.setTimeout(() => {
+      if (seq !== this.seq) return;
+      void this.shape("orb").then(layout => { if (seq === this.seq) this.apply(layout); }).catch(() => {});
+    }, ORB.close);
+  }
+
+  /** A new view was mounted (or the widget left circle mode): closed, circle at the window's corner. */
+  reset() {
+    this.open = false; this.seq++; this.press = null;
+    this.frame.classList.remove("is-flyout-open");
+    this.apply({ shape: "orb", side: "right", orbX: 0, orbY: 0, width: ORB.size, height: ORB.size });
+  }
+
+  private apply(layout: OrbLayout) {
+    const style = this.frame.style, flyout = this.frame.querySelector<HTMLElement>(".rd-orb-flyout");
+    const height = flyout?.offsetHeight ?? 0;
+    style.setProperty("--rd-orb-x", layout.orbX + "px");
+    style.setProperty("--rd-orb-y", layout.orbY + "px");
+    style.setProperty("--rd-flyout-x", (layout.side === "left" ? 0 : ORB.size + ORB.gap) + "px");
+    style.setProperty("--rd-flyout-y", Math.max(0, Math.min(layout.orbY, layout.height - height)) + "px");
+    this.frame.dataset.side = layout.side;
+  }
+}
+
 export function startWidget(host: HTMLElement, store: Store): void {
   document.body.classList.add("rd-widget-window");
   const frame = h(host, "div", { cls: "rd-widget-frame" });
@@ -92,6 +169,7 @@ export function startWidget(host: HTMLElement, store: Store): void {
   h(grip, "span", { cls: "rd-widget-grip-bar", attr: { "data-tauri-drag-region": "", "aria-hidden": "true" } });
   const close = h(grip, "button", { cls: "rd-widget-close", attr: { type: "button", "aria-label": "Hide widget", title: "Hide widget" } });
   close.addEventListener("click", () => void api.widgetSetVisible(false));
+  const shrink = h(grip, "button", { cls: "rd-widget-shrink", attr: { type: "button", "aria-label": "Shrink to a circle", title: "Shrink to a circle" } });
   const page = h(frame, "div", { cls: "rd-native-dashboard rd-mini-host" });
   const panel = h(page, "div", { cls: "rd-app-panel", attr: { "data-mode": "mini" } });
 
@@ -114,27 +192,49 @@ export function startWidget(host: HTMLElement, store: Store): void {
     openProject: async projectId => { await api.navigateMain({ projectId }); },
     focusChapter: async (projectId, sourceId, chapterId) => { await api.navigateMain({ projectId, sourceId, chapterId }); },
   };
-  if (!store.workspace) {
-    const empty = h(panel, "div", { cls: "rd-app-empty" });
-    h(empty, "p", { text: "Open or create a workspace in the main window." });
-    const button = h(empty, "button", { text: "Open dashboard", attr: { type: "button" } });
-    button.addEventListener("click", () => void api.navigateMain({}));
+  /* One view at a time: the mini layout, or the circle (orb) while collapsed. Remounted when the workspace or the shape
+   * changes (the shape is a setting, so the tray and other windows stay in step). */
+  const orb = new OrbControl(frame, () => void reshape("panel"));
+  let view: ReturnType<typeof mountView> | null = null, mounted: { root: string | null; mode: string } | null = null;
+  const wanted = () => (store.workspace && store.settings?.widget.collapsed ? "orb" : "mini");
+  function mount() {
+    const next = { root: store.workspace?.root || null, mode: wanted() };
+    if (mounted && mounted.root === next.root && mounted.mode === next.mode) return;
+    mounted = next;
+    view?.dispose(); view = null; panel.replaceChildren();
+    panel.dataset.mode = next.mode;
+    document.body.classList.toggle("rd-orb-window", next.mode === "orb");
+    frame.classList.toggle("is-orb", next.mode === "orb");
+    orb.reset();
+    if (!store.workspace) {
+      const empty = h(panel, "div", { cls: "rd-app-empty" });
+      h(empty, "p", { text: "Open or create a workspace in the main window." });
+      const button = h(empty, "button", { text: "Open dashboard", attr: { type: "button" } });
+      button.addEventListener("click", () => void api.navigateMain({}));
+      return;
+    }
+    view = mountView(panel, { mode: next.mode as "mini" | "orb" }, { load: async () => store.model(), bridge, navigate: () => void api.navigateMain({}), openExternal: () => {}, openWorkspaceFile: () => {}, subscribe: listener => store.subscribe(listener) });
   }
-  let view = store.workspace ? mountView(panel, { mode: "mini" }, { load: async () => store.model(), bridge, navigate: () => void api.navigateMain({}), openExternal: () => {}, openWorkspaceFile: () => {}, subscribe: listener => store.subscribe(listener) }) : null;
-  let workspaceRoot = store.workspace?.root || null;
-  store.subscribe(() => {
-    if ((store.workspace?.root || null) === workspaceRoot) return;
-    workspaceRoot = store.workspace?.root || null;
-    view?.dispose(); panel.replaceChildren();
-    view = mountView(panel, { mode: "mini" }, { load: async () => store.model(), bridge, navigate: () => void api.navigateMain({}), openExternal: () => {}, openWorkspaceFile: () => {}, subscribe: listener => store.subscribe(listener) });
-  });
+  async function reshape(shape: "panel" | "orb") {
+    try {
+      await api.widgetShape(shape);
+      if (store.settings) store.settings = { ...store.settings, widget: { ...store.settings.widget, collapsed: shape === "orb" } };
+      mount();
+    } catch (error) { report(error); }
+  }
+  shrink.addEventListener("click", () => void reshape("orb"));
+  mount();
+  store.subscribe(mount);
+  /* A collapsed widget without a workspace has nothing to show in a circle: open the panel. A collapsed one starts closed. */
+  if (store.settings?.widget.collapsed) void api.widgetShape(store.workspace ? "orb" : "panel").catch(() => {});
 
   const fade = new IdleFade(document.documentElement, frame,
     () => Boolean(store.settings?.widget.fadeWhenIdle && store.settings?.widget.keepOnTop),
     () => Math.min(IDLE.max, Math.max(IDLE.min, store.settings?.widget.idleOpacity ?? 0.55)));
   store.subscribe(() => fade.refresh());
-  void listen<boolean>("widget://pointer", event => fade.pointer(Boolean(event.payload)))
-    .then(() => api.widgetPointer()).then(inside => { if (typeof inside === "boolean") fade.pointer(inside); }).catch(() => {});
+  const pointer = (inside: boolean) => { fade.pointer(inside); if (mounted?.mode === "orb") orb.pointer(inside); };
+  void listen<boolean>("widget://pointer", event => pointer(Boolean(event.payload)))
+    .then(() => api.widgetPointer()).then(inside => { if (typeof inside === "boolean") pointer(inside); }).catch(() => {});
   window.addEventListener("keydown", event => {
     if (event.key === "Escape" && !(event.target as HTMLElement | null)?.closest?.("input, select, textarea, form")) void getCurrentWindow().hide().then(() => api.widgetSetVisible(false));
   });

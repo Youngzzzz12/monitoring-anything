@@ -10,6 +10,7 @@ import { buildModel } from "../src/model/load";
 import { planCard, type PlanCardHost } from "../src/ui/plan-card";
 import { mountView, type ActionBridge } from "../src/view/view";
 import { snapshot } from "./fixtures";
+import { OrbControl } from "../src/app/widget";
 
 const wait = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 async function until(check: () => unknown, timeout = 2000) {
@@ -175,6 +176,62 @@ describe("widget milestones", () => {
     await until(() => quickMilestone.mock.calls.length);
     expect(quickMilestone).toHaveBeenCalledWith("sim", "Submit abstract");
     document.body.classList.remove("rd-motion-off");
+    handle.dispose();
+  });
+});
+
+describe("widget as a circle", () => {
+  const mountOrb = async (focusProjectId: string | null) => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const bridge: ActionBridge = { getStatus: () => ({ running: false, busy: false, focusProjectId }), openProject: vi.fn(), focusChapter: vi.fn() };
+    const handle = mountView(container, { mode: "orb" }, { load: async () => buildModel(snapshot()), bridge, navigate: vi.fn(), openExternal: vi.fn(), openWorkspaceFile: vi.fn(), subscribe: () => () => {} });
+    await handle.painted;
+    return { container, handle, bridge };
+  };
+
+  it("shows the completion ring and the breakdown: projects, sub-projects or a paper's chapters", async () => {
+    /* All projects: the average by top-level project (thesis family 2/5, simulation 1/1). */
+    const all = await mountOrb(null);
+    expect(all.container.querySelector(".rd-mini-header, .rd-module-header")?.closest("header")?.hidden).toBe(true);
+    expect(all.container.querySelector(".rd-orb-value")!.textContent).toBe("70%");
+    expect(Array.from(all.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["PhD thesis", "Impact runs"]);
+    (all.container.querySelector(".rd-orb-row") as HTMLButtonElement).click();
+    await until(() => (all.bridge.openProject as ReturnType<typeof vi.fn>).mock.calls.length);
+    expect(all.bridge.openProject).toHaveBeenCalledWith("thesis", expect.anything());
+    all.handle.dispose();
+    const thesis = await mountOrb("thesis");
+    expect(thesis.container.querySelector(".rd-orb-title")!.textContent).toBe("PhD thesis");
+    expect(thesis.container.querySelector(".rd-orb-value")!.textContent).toBe("40%");
+    expect(Array.from(thesis.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["Framework paper"]);
+    thesis.handle.dispose();
+    const paper = await mountOrb("paper");
+    expect(Array.from(paper.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["Introduction", "Method"]);
+    expect(paper.container.querySelector(".rd-orb-row-value")!.textContent).toBe("100%");
+    paper.handle.dispose();
+  });
+
+  it("opens the flyout on hover beside the circle, closes it on leave and expands on a click", async () => {
+    const { container, handle } = await mountOrb(null);
+    const frame = container;
+    const shape = vi.fn(async (kind: "panel" | "orb" | "flyout") => kind === "flyout"
+      ? { shape: "flyout" as const, side: "left" as const, orbX: 250, orbY: 0, width: 322, height: 140 }
+      : { shape: "orb" as const, side: "right" as const, orbX: 0, orbY: 0, width: 72, height: 72 });
+    const expand = vi.fn();
+    const control = new OrbControl(frame, expand, shape);
+    control.pointer(true);
+    await until(() => frame.classList.contains("is-flyout-open"));
+    expect(shape).toHaveBeenCalledWith("flyout", expect.any(Array));
+    expect(frame.dataset.side).toBe("left");
+    expect(frame.style.getPropertyValue("--rd-orb-x")).toBe("250px");
+    expect(frame.style.getPropertyValue("--rd-flyout-x")).toBe("0px");
+    control.pointer(false);
+    expect(frame.classList.contains("is-flyout-open")).toBe(false);
+    await until(() => shape.mock.calls.some(call => call[0] === "orb"), 1000);
+    await until(() => frame.style.getPropertyValue("--rd-orb-x") === "0px");
+    const dial = container.querySelector(".rd-orb-dial") as HTMLButtonElement;
+    dial.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
+    expect(expand).toHaveBeenCalledTimes(1);
     handle.dispose();
   });
 });

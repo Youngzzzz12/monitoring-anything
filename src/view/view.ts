@@ -16,7 +16,7 @@ import { OVERALL_LINK, type Chapter, type Model, type PaperDetail, type Project,
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Dict = Record<string, any>;
 
-export type Mode = "overview" | "projects" | "attention" | "project-overview" | "paper" | "paper-progress" | "milestones" | "runs" | "resources" | "health" | "mini";
+export type Mode = "overview" | "projects" | "attention" | "project-overview" | "paper" | "paper-progress" | "milestones" | "runs" | "resources" | "health" | "mini" | "orb";
 
 export interface ViewInput {
   mode: Mode;
@@ -1104,6 +1104,8 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     if (running) el(meta, "span", running + " running");
   }
   const header = el(module, "header", null, mode === "overview" ? "rd-overall-header" : mode === "project-overview" || mode === "paper" ? "rd-hero-header" : mode === "mini" ? "rd-mini-header" : "rd-module-header");
+  /* The circle widget (orb) has no header: the ring is the whole view. */
+  if (mode === "orb") header.hidden = true;
   const headingCopy = el(header, "div", null, "rd-header-copy");
   /* A sub-project's page names its parent above the title; the h1 itself stays untouched (the page transition morphs it). */
   const crumb = mode === "project-overview" || mode === "paper" ? el(headingCopy, "nav", null, "rd-project-breadcrumb") : null;
@@ -2029,8 +2031,8 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
    * paper without sub-projects, one per top-level chapter (accepted / defined chapter milestones, as Chapter progress
    * on the project page). Hovering names the bar; clicking opens the detail in the dashboard. False when there is
    * nothing to chart (the counts are shown instead). */
-  function miniProgressBars(parent: Element, focus: Project): boolean {
-    type Bar = { key: string; title: string; done: number; total: number; open: (bridge: ActionBridge) => Promise<unknown> | unknown; method: keyof ActionBridge };
+  type Bar = { key: string; title: string; done: number; total: number; open: (bridge: ActionBridge) => Promise<unknown> | unknown; method: keyof ActionBridge };
+  function focusBars(focus: Project): Bar[] {
     let bars: Bar[] = [];
     if (focus.children?.length) {
       bars = focus.children.map(child => { const counts = familyCount(child); return { key: "sub:" + child.id, title: child.title, done: counts.completed, total: counts.total, method: "openProject" as const, open: (bridge: ActionBridge) => bridge.openProject!(child.id, mainWindow) }; });
@@ -2044,6 +2046,10 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
         });
       }
     }
+    return bars;
+  }
+  function miniProgressBars(parent: Element, focus: Project): boolean {
+    const bars = focusBars(focus);
     if (!bars.length) return false;
     const chart = el(parent, "div", null, "rd-mini-bars" + (bars.length > 12 ? " is-dense" : ""));
     chart.setAttribute("role", "list");
@@ -2284,6 +2290,50 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     miniAlerts(content, alerts);
     if (actionMessage) el(content, "p", actionMessage, "rd-caption rd-mini-message");
   }
+  /* The widget shrunk to a circle: the focused project's completion (family-wide), or the average by top-level project
+   * as on Overall. The flyout beside it lists what makes that up (sub-projects, a paper's top-level chapters, or the
+   * top-level projects); widget.ts sizes the window for it and opens it on hover. Rows open their detail in the
+   * dashboard; clicking or dragging the circle itself is handled by the widget window. */
+  function renderOrb(projects: Project[]) {
+    const focusId = status().focusProjectId, focus = focusId ? projects.find(project => project.id === focusId) || null : null;
+    const tops = projects.filter(project => !project.parent);
+    let share: number | null;
+    if (focus) { const counts = familyCount(focus); share = counts.total ? counts.completed / counts.total : null; }
+    else {
+      const rated = tops.map(familyCount).filter(counts => counts.total);
+      share = rated.length ? rated.reduce((sum, counts) => sum + counts.completed / counts.total, 0) / rated.length : null;
+    }
+    const percent = share === null ? null : Math.round(share * 100), title = focus ? focus.title : titles.mini;
+    const orb = el(content, "button", null, "rd-orb-dial") as HTMLButtonElement;
+    orb.type = "button";
+    orb.setAttribute("aria-label", title + ": " + (percent === null ? "no milestones defined" : percent + "% complete") + ". Click to open the widget; drag to move it.");
+    miniRing(orb, share);
+    el(el(orb, "span", null, "rd-orb-center"), "strong", percent === null ? "—" : percent + "%", "rd-orb-value");
+    const flyout = el(content, "div", null, "rd-orb-flyout");
+    const head = el(flyout, "div", null, "rd-orb-head");
+    el(head, "strong", title, "rd-orb-title");
+    el(head, "span", percent === null ? "—" : percent + "%", "rd-orb-percent");
+    const bars: Bar[] = focus ? focusBars(focus) : tops.map(project => {
+      const counts = familyCount(project);
+      return { key: "top:" + project.id, title: project.title, done: counts.completed, total: counts.total, method: "openProject" as const, open: (bridge: ActionBridge) => bridge.openProject!(project.id, mainWindow) };
+    });
+    const shown = bars.slice(0, 8);
+    if (shown.length) {
+      const list = el(flyout, "div", null, "rd-orb-list");
+      for (const bar of shown) {
+        const rowShare = bar.total ? bar.done / bar.total : null, rowPercent = rowShare === null ? null : Math.round(rowShare * 100);
+        const row = miniButton(list, "rd-orb-row" + (rowShare !== null && rowShare >= 1 ? " is-complete" : ""), bar.title + ": " + (rowPercent === null ? "no milestones defined" : rowPercent + "%") + ". Open in the dashboard", bar.method, bar.open);
+        el(row, "span", bar.title, "rd-orb-row-name");
+        const track = el(row, "span", null, "rd-orb-row-track");
+        el(track, "span", null, "rd-orb-row-fill").style.width = ((rowShare ?? 0) * 100).toFixed(1) + "%";
+        el(row, "span", rowPercent === null ? "—" : rowPercent + "%", "rd-orb-row-value");
+      }
+    }
+    const own = focus ? familyCount(focus) : null, family = focus?.children?.length || 0;
+    const caption = own ? (own.total ? own.completed + " / " + own.total + " milestones" : "No milestones defined") + (family ? " · " + plural(family, "sub-project") : "")
+      : tops.length ? "Average by project" : "No projects yet";
+    el(flyout, "p", caption + (bars.length > shown.length ? " · " + (bars.length - shown.length) + " more in the widget" : ""), "rd-orb-caption");
+  }
   /* First load: a quiet, text-free outline of each mode's layout until the first paint replaces it. */
   function skeleton() {
     root.className += " is-loading"; record.skeletonAt = elapsed();
@@ -2304,6 +2354,8 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     } else if (mode === "paper-progress") {
       const grid = box(wrap, "columns");
       for (let column = 0; column < 2; column++) { const chart = box(grid, "lines"); bone(chart, "short"); for (let index = 0; index < 3; index++) { const row = box(chart, "bar-row"); bone(row, "line"); bone(row, "bar"); } }
+    } else if (mode === "orb") {
+      bone(wrap, "ring");
     } else if (mode === "mini") {
       const summary = box(wrap, "row"), lines = box(summary, "lines"); bone(summary, "ring"); summary.appendChild(lines); bone(lines, "line"); bone(lines, "short");
       rows(3);
@@ -2345,7 +2397,7 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     captureDisclosures(); record.disclosureNodes.clear();
     record.paintEpoch++; clear(content); if (cause === "first") reveal(); endLoading();
     record.animate = cause === "data" && canAnimate(); record.nextMarks = new Map(); record.updated.clear();
-    const renderers: Record<string, (projects: Project[]) => void> = { mini: renderMini, overview: renderOverview, "project-overview": renderProjectOverview, paper: renderProjectOverview, "paper-progress": renderPaperProgress, attention: renderAttention, projects: renderProjects, milestones: renderMilestones, runs: renderRuns, resources: renderResources, health: renderHealth };
+    const renderers: Record<string, (projects: Project[]) => void> = { mini: renderMini, orb: renderOrb, overview: renderOverview, "project-overview": renderProjectOverview, paper: renderProjectOverview, "paper-progress": renderPaperProgress, attention: renderAttention, projects: renderProjects, milestones: renderMilestones, runs: renderRuns, resources: renderResources, health: renderHealth };
     try {
       if (renderers[mode]) renderers[mode](model.projects);
       else empty(content, "Unknown module", "Undefined mode: " + mode);

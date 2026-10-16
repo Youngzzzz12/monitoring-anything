@@ -1,8 +1,9 @@
 # Monitoring Anything
 
-A desktop app that keeps track of the things you work on: papers, theses, Word manuscripts, simulations and
-machine-learning training runs. Connect a folder and it follows the progress by itself (sections written, words
-today, job and run status), next to your projects and milestones. A floating widget keeps the overview on screen.
+A desktop app that keeps track of the things you work on: papers, theses, Word manuscripts, simulations,
+machine-learning training runs, and anything else that leaves files behind. Connect a folder and it follows the
+progress by itself, next to your projects and milestones. A floating widget, or a small circle, keeps the overview on
+screen.
 
 Your folders are only read; nothing is compiled, run or modified. Everything the app stores lives in a **workspace**,
 an ordinary folder of JSON and Markdown files.
@@ -11,25 +12,66 @@ an ordinary folder of JSON and Markdown files.
 
 ![Overview](docs/screenshots/overall.png)
 
+## What it can follow
+
+Each connected folder gets a **monitoring type**: rules that recognise the folder and say what to read from it. Some
+come built in; any other kind of work gets a type of its own. The examples below use made-up projects.
+
+### A thesis written in LaTeX
+
+An umbrella project for the thesis, with each paper as a sub-project. For a LaTeX paper the app reads the section
+structure and the words written today and this week, per section. Chapter milestones (draft, complete) are accepted
+against the section's current text, and "Next up" puts what you were just writing first. Word manuscripts work the
+same way at document level (words, headings, comments, tracked changes).
+
+![A LaTeX paper: structure, chapter progress and writing activity](docs/screenshots/project.png)
+
+### A training run
+
+Point it at a run folder with a PyTorch Lightning `metrics.csv` or a Keras `history.csv`: epochs against
+`max_epochs`, best validation loss, latest losses and accuracy, and the checkpoints as results. Abaqus jobs (status
+logs) and iSALE batches (case metadata) have built-in types too.
+
+![A training run: epochs, losses and accuracy](docs/screenshots/case-training.png)
+
+### Anything else: your own type
+
+A test rig that writes CSV logs, a solver of your own, a survey that grows a folder of responses: choose **Smart
+monitoring** and an agent (Claude Code, Codex, Gemini CLI, Ollama / LM Studio, or an API) designs a type from file
+names and short excerpts. Or write it yourself. The plan is validated and previewed against the folder's current files
+before anything is connected, and **Save as monitoring type** makes it reusable without an agent. A type is plain JSON
+with read-only rules (globs, regexes, CSV and JSON values, log status):
+
+```json
+{
+  "schemaVersion": "1.0", "id": "fatigue-rig", "title": "Fatigue test rig", "projectType": "experiment",
+  "detect": { "allOf": [{ "glob": "rig.json" }], "anyOf": [{ "glob": "logs/*.csv" }] },
+  "extract": {
+    "runtime": {
+      "status": { "fromLog": "logs/*.log", "success": "^Test complete", "failure": "^ABORT", "running": "^Cycle" },
+      "currentValue": { "csv": "logs/*.csv", "column": "cycle", "aggregate": "max" },
+      "targetValue": { "jsonPath": "rig.json#$.targetCycles" },
+      "unit": "cycles"
+    },
+    "metrics": [{ "id": "peak-load", "label": "Peak load", "unit": "kN",
+                  "value": { "csv": "logs/*.csv", "column": "load_kN", "aggregate": "max" } }]
+  }
+}
+```
+
+![A custom type: cycles, cases and metrics from a test rig's logs](docs/screenshots/case-custom.png)
+
+### On screen while you work
+
+The floating widget shows projects, Next up and progress; focus one project to see its sub-projects or chapters, and
+complete or add milestones there. Shrink it to a **circle** with just the completion ring: hovering shows the
+breakdown beside it, a click opens the widget again, and you can drag the circle anywhere.
+
 <p>
-  <img src="docs/screenshots/project.png" alt="A paper project: structure, chapter progress and writing activity" width="58%">
-  <img src="docs/screenshots/widget.png" alt="Floating widget" width="19%">
-  <img src="docs/screenshots/widget-focus.png" alt="Widget focused on one project" width="19%">
+  <img src="docs/screenshots/widget.png" alt="Floating widget" width="30%">
+  <img src="docs/screenshots/widget-focus.png" alt="Widget focused on one project" width="30%">
+  <img src="docs/screenshots/orb.png" alt="The widget as a circle, with its breakdown on hover" width="36%">
 </p>
-
-## Features
-
-- **Projects and milestones** with one level of sub-projects, due dates and a "Next up" list (overdue first, then due
-  soon, then what you were writing, then each project's next step).
-- **Connect a folder** by picking or dropping it. The app recognises LaTeX papers, Word manuscripts, ML training runs
-  (Lightning / Keras logs), Abaqus jobs and iSALE batches, previews what it will read, and asks you to confirm.
-- **Smart monitoring**: for anything else, an agent (Claude Code, Codex, Gemini CLI, Ollama / LM Studio, or an API)
-  designs a monitoring plan from file names and short excerpts. Save it as a type to reuse it without an agent.
-- **Live updates** within seconds of saving, plus a periodic check.
-- **Floating widget**: projects, Next up and progress at a glance; focus one project to see its chapters or
-  sub-projects; complete or add milestones without opening the main window.
-- **Use it from your agent**: install the skill from Settings → Agent, then ask Claude Code or Codex "how is my
-  thesis going?", "add a milestone" or "track this folder".
 
 ## Install
 
@@ -45,9 +87,10 @@ needed. For Smart monitoring, have one of the supported agents installed (the fi
 ## Agents
 
 Settings → Agent → **Use Monitoring Anything from your agent** installs a skill into `~/.claude/skills/` and
-`~/.codex/skills/`. Agents work through the `ma` command line the app keeps next to its settings
-(`%APPDATA%\io.github.monitoring-anything\ma.cmd` on Windows). They can report progress and manage milestones; a new
-folder connection always opens in the app for you to confirm. The app never replaces a skill it did not install.
+`~/.codex/skills/`; then ask Claude Code or Codex "how is my thesis going?", "add a milestone" or "track this folder".
+Agents work through the `ma` command line the app keeps next to its settings
+(`%APPDATA%\io.github.monitoring-anything\ma.cmd` on Windows). A new folder connection always opens in the app for you
+to confirm. The app never replaces a skill it did not install.
 
 ## Development
 

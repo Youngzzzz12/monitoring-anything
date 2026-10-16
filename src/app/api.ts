@@ -5,7 +5,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { parseCliResult, type CliOutput } from "../model/cli";
 import type { WorkspaceInfo, WorkspaceSnapshot } from "../model/types";
 
-export interface WidgetSettings { visible: boolean; keepOnTop: boolean; fadeWhenIdle: boolean; idleOpacity: number; focusProjectId: string | null; magnification: number; bounds: { x: number; y: number; width: number; height: number } | null }
+export interface WidgetSettings { visible: boolean; keepOnTop: boolean; fadeWhenIdle: boolean; idleOpacity: number; focusProjectId: string | null; magnification: number; bounds: { x: number; y: number; width: number; height: number } | null; collapsed: boolean; orb: { x: number; y: number } | null }
+/** The widget window's shape after a change: where the circle sits inside it and which side the flyout opens on. */
+export interface OrbLayout { shape: "panel" | "orb" | "flyout"; side: "left" | "right"; orbX: number; orbY: number; width: number; height: number }
 export interface AppSettings {
   schemaVersion: number; workspace: string | null; recentWorkspaces: string[]; pythonPath: string | null;
   motion: "full" | "subtle" | "off"; theme: "system" | "light" | "dark"; plainBackdrop: boolean;
@@ -59,6 +61,7 @@ export const api = {
   openSource: (sourceId: string, relative: string | null) => invoke<void>("open_source", { sourceId, relative }),
   widgetSetVisible: (visible: boolean) => invoke<boolean>("widget_set_visible", { visible }),
   widgetPointer: () => invoke<boolean | null>("widget_pointer"),
+  widgetShape: (shape: "panel" | "orb" | "flyout", flyout: [number, number] | null = null) => invoke<OrbLayout>("widget_shape", { shape, flyout }),
   connectInMain: (source: string | null) => invoke<void>("connect_in_main", { source }),
   takeRequests: () => invoke<AgentRequest[]>("take_requests"),
   skillStatus: () => invoke<SkillTarget[]>("skill_status"),

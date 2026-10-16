@@ -35,6 +35,19 @@ impl WidgetBounds {
     }
 }
 
+/// Where the circle widget sits on screen (its top-left corner, logical pixels).
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OrbPoint {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl OrbPoint {
+    pub fn sane(self) -> Option<Self> {
+        (self.x.is_finite() && self.y.is_finite() && self.x.abs() < 100_000.0 && self.y.abs() < 100_000.0).then_some(self)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WidgetSettings {
@@ -49,11 +62,15 @@ pub struct WidgetSettings {
     pub magnification: f64,
     /// Where the widget was last placed; None opens it at the default size.
     pub bounds: Option<WidgetBounds>,
+    /// Shrunk to a circle showing only the completion ring (hover shows the breakdown, click expands).
+    pub collapsed: bool,
+    /// Where the circle was last placed.
+    pub orb: Option<OrbPoint>,
 }
 
 impl Default for WidgetSettings {
     fn default() -> Self {
-        Self { visible: false, keep_on_top: true, fade_when_idle: true, idle_opacity: 0.55, focus_project_id: None, magnification: 0.05, bounds: None }
+        Self { visible: false, keep_on_top: true, fade_when_idle: true, idle_opacity: 0.55, focus_project_id: None, magnification: 0.05, bounds: None, collapsed: false, orb: None }
     }
 }
 
@@ -126,6 +143,7 @@ impl AppSettings {
         }
         self.widget.magnification = self.widget.magnification.clamp(0.0, 0.08);
         self.widget.bounds = self.widget.bounds.and_then(WidgetBounds::sane);
+        self.widget.orb = self.widget.orb.and_then(OrbPoint::sane);
         self.widget.focus_project_id = self.widget.focus_project_id.take().filter(|id| crate::fsutil::require_id(id, "Project ID").is_ok());
         self.recent_workspaces.truncate(8);
         self.python_path = self.python_path.filter(|p| !p.trim().is_empty());

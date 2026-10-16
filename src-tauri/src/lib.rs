@@ -448,6 +448,12 @@ async fn widget_set_visible(app: AppHandle, visible: bool) -> Result<bool> {
     windows::set_widget_visible(&app, visible)
 }
 
+/// The widget as a panel, a circle, or a circle with its flyout (the flyout's measured width and height).
+#[tauri::command]
+fn widget_shape(app: AppHandle, shape: String, flyout: Option<[f64; 2]>) -> Result<windows::OrbLayout> {
+    windows::set_widget_shape(&app, &shape, flyout.map(|[w, h]| (w, h)))
+}
+
 #[tauri::command]
 fn widget_pointer(app: AppHandle) -> Option<bool> {
     windows::widget_pointer_inside(&app)
@@ -579,6 +585,7 @@ pub fn run() {
             open_source,
             widget_set_visible,
             widget_pointer,
+            widget_shape,
             connect_in_main,
             take_requests,
             skill_status,

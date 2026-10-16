@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildModel, health, hierarchyItems, sourceDirectory, StateCache } from "../src/model/load";
+import { buildModel, health, hierarchyItems, sourceDirectory, sourceDisplay, StateCache } from "../src/model/load";
 import { eligibleParents, slugId, uniqueProjectId, validateDue, validateNewProject, validateParent, validateProjectValues } from "../src/model/rules";
 import { snapshot } from "./fixtures";
 
@@ -93,5 +93,16 @@ describe("hierarchy rules", () => {
     expect(uniqueProjectId("Paper", ["paper", "paper-2"])).toBe("paper-3");
     expect(validateDue("")).toBeNull();
     expect(() => validateDue("2026-13-01")).toThrow();
+  });
+});
+
+describe("sourceDisplay", () => {
+  it("names built-in declarative types plainly and saved or agent-made ones as Custom", () => {
+    const config = (profileId: string) => ({ schemaVersion: "1.0", projectId: "s", title: "S", kind: "abaqus", profileId });
+    const titles = new Map([["ml-training", "Machine-learning training run"], ["rig", "Fatigue test rig"]]);
+    const builtin = new Set(["latex-paper", "ml-training"]);
+    expect(sourceDisplay(config("ml-training"), titles, builtin)?.label).toBe("Machine-learning training run");
+    expect(sourceDisplay(config("rig"), titles, builtin)?.label).toBe("Custom · Fatigue test rig");
+    expect(sourceDisplay(config("latex-paper"), titles, builtin)).toBeNull();
   });
 });

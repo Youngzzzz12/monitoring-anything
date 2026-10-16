@@ -3,7 +3,19 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - unreleased
+## [Unreleased]
+
+### Added
+- Widget as a circle: Shrink in the widget's top bar leaves only the completion ring (the focused project, or the
+  average by project). Hovering shows the breakdown beside it (sub-projects, a paper's chapters, or the projects) on
+  the side with room; a click opens the widget again; drag it anywhere (its place is remembered).
+- README examples (LaTeX thesis, training run, a custom monitoring type) with screenshots from `dev/demo.html`.
+
+### Fixed
+- Built-in declarative types (Word manuscript, training run) are no longer labelled Custom.
+- Widget title "All projects" (was "Research"); "1 alert" / "1 running source".
+
+## [0.1.0] - 2026-10-16
 
 First public release, named Monitoring Anything (formerly Research Dashboard). Settings and workspaces from earlier
 builds are picked up automatically.

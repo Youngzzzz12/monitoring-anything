@@ -48,13 +48,14 @@ function humanizeId(value: string): string {
 }
 
 /** A declarative source stores a borrowed kind (latex/abaqus/isale) for the snapshot contract; its profile names it. */
-export function sourceDisplay(config: SourceConfig | null, profileTitles: Map<string, string>): Source["display"] {
+export function sourceDisplay(config: SourceConfig | null, profileTitles: Map<string, string>, builtinIds: Set<string> = builtinProfileIds): Source["display"] {
   const adapter = config?.adapter as Record<string, unknown> | undefined;
   const profileId = typeof config?.profileId === "string" ? config.profileId : typeof adapter?.profileId === "string" ? adapter.profileId : null;
   const custom = adapter?.engine === "declarative" || Boolean(profileId && !builtinProfileIds.has(profileId));
   if (!custom) return null;
   const title = (profileId && profileTitles.get(profileId)) || (profileId ? humanizeId(profileId) : "Monitoring profile");
-  return { label: "Custom · " + title, title, profileId };
+  /* Built-in declarative types (Word manuscript, training run) are named as they are; saved and agent-made ones are Custom. */
+  return { label: profileId && builtinIds.has(profileId) ? title : "Custom · " + title, title, profileId };
 }
 
 function absoluteLocal(path: string): boolean {
@@ -137,6 +138,7 @@ const priority: Record<string, number> = { blocked: 0, active: 1, paused: 2, unk
 export function buildModel(snapshot: WorkspaceSnapshot, cache: StateCache = new StateCache(), now = Date.now()): Model {
   const errors: ModelIssue[] = snapshot.errors.map(message => ({ path: "", message }));
   const profileTitles = new Map(snapshot.profiles.map(item => [item.id, item.title]));
+  const builtinIds = new Set([...builtinProfileIds, ...snapshot.profiles.filter(item => item.origin === "builtin").map(item => item.id)]);
   const localMappings = new Map<string, { aliases: Record<string, unknown> }>();
   for (const entry of snapshot.local) {
     const value = entry.value;
@@ -191,7 +193,7 @@ export function buildModel(snapshot: WorkspaceSnapshot, cache: StateCache = new 
     sources.set(id, {
       id, config, state, readError, health: health(state, readError, now),
       title: text(config?.title || state?.title || id), kind: text(config?.kind || state?.kind, "unknown"),
-      display: sourceDisplay(config, profileTitles), directory: sourceDirectory(config, localMappings),
+      display: sourceDisplay(config, profileTitles, builtinIds), directory: sourceDirectory(config, localMappings),
     });
   }
   const projects: Project[] = [];

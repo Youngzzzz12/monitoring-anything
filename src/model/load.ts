@@ -51,11 +51,12 @@ function humanizeId(value: string): string {
 export function sourceDisplay(config: SourceConfig | null, profileTitles: Map<string, string>, builtinIds: Set<string> = builtinProfileIds): Source["display"] {
   const adapter = config?.adapter as Record<string, unknown> | undefined;
   const profileId = typeof config?.profileId === "string" ? config.profileId : typeof adapter?.profileId === "string" ? adapter.profileId : null;
-  const custom = adapter?.engine === "declarative" || Boolean(profileId && !builtinProfileIds.has(profileId));
+  const custom = adapter?.engine === "declarative" || adapter?.engine === "script" || Boolean(profileId && !builtinProfileIds.has(profileId));
   if (!custom) return null;
   const title = (profileId && profileTitles.get(profileId)) || (profileId ? humanizeId(profileId) : "Monitoring profile");
   /* Built-in declarative types (Word manuscript, training run) are named as they are; saved and agent-made ones are Custom. */
-  return { label: profileId && builtinIds.has(profileId) ? title : "Custom · " + title, title, profileId };
+  const prefix = adapter?.engine === "script" ? "Custom adapter · " : "Custom · ";
+  return { label: profileId && builtinIds.has(profileId) ? title : prefix + title, title, profileId };
 }
 
 function absoluteLocal(path: string): boolean {

@@ -39,7 +39,7 @@ export interface PreviewResult { ok?: boolean; preview?: Record<string, unknown>
 /** A monitoring choice on the plan card: a detected library profile or legacy kind, an agent's plan, or an edited profile. */
 export interface PlanOption {
   key: string; mode: "library" | "legacy" | "agent" | "custom"; profileId: string | null; kind?: string; title: string;
-  origin: "builtin" | "user" | "agent" | "custom"; engine: "adapter" | "declarative"; sourceKind: string | null; projectType: string;
+  origin: "builtin" | "user" | "agent" | "custom"; engine: Engine; sourceKind: string | null; projectType: string;
   confidence: number; threshold: number; meetsThreshold: boolean; matched: string[]; missed: string[];
   milestoneTemplate: MilestoneTemplateRef; entries: InspectEntry[]; suggestedId?: string; suggestedTitle?: string | null;
   /* Agent and edited plans. */
@@ -49,6 +49,15 @@ export interface PlanOption {
 }
 
 /** Monitoring options from `inspect`: scored `candidates`, or (older tools) one legacy option per source kind. */
+/** How a monitoring type extracts: a built-in adapter, declarative rules, or a custom adapter written for the folder. */
+export type Engine = "adapter" | "declarative" | "script";
+export function engineOf(value: unknown): Engine { return value === "declarative" || value === "script" ? value : "adapter"; }
+/** The custom adapter's source when a profile carries one (extract.script.code). */
+export function adapterCode(profile: Record<string, unknown> | null | undefined): string | null {
+  const script = ((profile?.extract as Record<string, unknown> | undefined)?.script) as Record<string, unknown> | undefined;
+  return script && typeof script.code === "string" ? script.code : null;
+}
+
 export function planOptions(inspection: Inspection | null | undefined): PlanOption[] {
   const entries = Array.isArray(inspection?.profiles) ? inspection!.profiles!.filter(item => item && typeof item.id === "string") : [];
   if (Array.isArray(inspection?.candidates)) {
@@ -56,7 +65,7 @@ export function planOptions(inspection: Inspection | null | undefined): PlanOpti
       const inspected = (Array.isArray(item.inspectedProfileIds) ? item.inspectedProfileIds as string[] : []).filter(id => entries.some(entry => entry.id === id));
       return {
         key: `profile:${item.profileId}`, mode: "library" as const, profileId: String(item.profileId), title: String(item.title || item.profileId),
-        origin: item.origin === "user" ? "user" as const : "builtin" as const, engine: item.engine === "declarative" ? "declarative" as const : "adapter" as const,
+        origin: item.origin === "user" ? "user" as const : "builtin" as const, engine: engineOf(item.engine),
         sourceKind: typeof item.sourceKind === "string" ? item.sourceKind : null,
         projectType: Object.hasOwn(PROJECT_TYPES, String(item.projectType)) ? String(item.projectType) : "other",
         confidence: Number.isFinite(Number(item.confidence)) ? Number(item.confidence) : 0, threshold: Number(item.threshold) || 0,
@@ -304,7 +313,7 @@ export function folderTitle(value: string): string {
 
 /* ---------- Sub-project discovery ---------- */
 
-export interface DiscoveryCandidate { profileId: string; title: string; projectType: string; confidence: number; subprojectRole: "standalone" | "part"; sourceKind: string | null; origin: "builtin" | "user"; engine: "adapter" | "declarative" }
+export interface DiscoveryCandidate { profileId: string; title: string; projectType: string; confidence: number; subprojectRole: "standalone" | "part"; sourceKind: string | null; origin: "builtin" | "user"; engine: Engine }
 export interface Suggestion {
   id: string; projectId: string; parentId: string; projectTitle: string; folder: string; relative: string; rootName: string;
   autoAccept: boolean; suggestedTitle: string; suggestedId: string; bestCandidate: DiscoveryCandidate | null;
@@ -336,7 +345,7 @@ export function normalizeSuggestion(item: unknown): Suggestion | null {
       projectType: Object.hasOwn(PROJECT_TYPES, String(best.projectType)) ? String(best.projectType) : "other",
       confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
       subprojectRole: best.subprojectRole === "part" ? "part" : "standalone", sourceKind: typeof best.sourceKind === "string" ? best.sourceKind : null,
-      origin: best.origin === "user" ? "user" : "builtin", engine: best.engine === "declarative" ? "declarative" : "adapter",
+      origin: best.origin === "user" ? "user" : "builtin", engine: engineOf(best.engine),
     } : null,
   };
 }

@@ -1,6 +1,6 @@
 ---
 name: monitoring-anything
-description: Track projects with the Monitoring Anything desktop app. Use when the user wants to monitor or track a project folder (paper, thesis, Word manuscript, simulation, ML training runs), asks how a project or paper is going, what to work on next, or wants to add, complete, rename, re-date or delete milestones.
+description: Track projects with the Monitoring Anything desktop app. Use when the user wants to monitor or track a project folder (paper, thesis, Word manuscript, simulation, ML training runs, or any folder that needs a custom adapter), asks how a project or paper is going, what to work on next, or wants to add, complete, rename, re-date or delete milestones.
 ---
 
 # Monitoring Anything
@@ -35,7 +35,13 @@ If it is missing, ask the user to start Monitoring Anything once. `ma where` sho
    names and a few short excerpts yourself, write a plan JSON (`{schemaVersion: "1.0", profile, project: {title, type},
    rationale}`) to a temporary file, check it with `ma preview --folder "<path>" --plan <file>` until `preview` shows
    sensible values, then `ma connect --folder "<path>" --plan <file>`.
-4. Tell the user the plan card is open in Monitoring Anything and to press Connect (they can adjust type, milestones and
+4. Rules cannot read it (binary or proprietary formats, values computed across files): build a custom adapter. Write
+   `collect(folder, options)` to a temporary `adapter.py` following `adapterContract` and rule 8 in `ma brief`, keep
+   the plan for detect/title/type, and iterate with `ma preview --folder "<path>" --plan <file> --script adapter.py`
+   until `ok` is true and the values are right (errors name the failed check or the exception and line). Then
+   `ma connect ... --plan <file> --script adapter.py`. The adapter may only read files; code that writes, starts
+   programs or uses the network fails the automatic check and never runs. Never write anything into the folder.
+5. Tell the user the plan card is open in Monitoring Anything and to press Connect (they can adjust type, milestones and
    parent there, and save the plan as a monitoring type for next time).
 
 Built-in types: LaTeX paper, Word manuscript, machine-learning training run (Lightning metrics.csv / Keras history.csv),

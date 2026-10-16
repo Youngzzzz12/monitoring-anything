@@ -16,6 +16,7 @@ from typing import Any
 
 from adapters import ADAPTERS, ENGINES
 from adapters.declarative import ensure_valid_extract
+from adapters.script import ensure_valid_script
 from adapters.common import UTC, iso, parse_time
 from adapters.latex_paper import observed_history
 from layout import layout_for, source_note_paths
@@ -133,10 +134,10 @@ def validate_config(config: dict[str, Any]) -> None:
         if adapter["engine"] not in ENGINES:
             raise ValueError("adapter.engine must be: " + ", ".join(sorted(ENGINES)))
         if set(adapter) - {"engine", "profileId", "profileVersion", "extract"}:
-            raise ValueError("A declarative adapter contains only engine, profileId, profileVersion and extract")
+            raise ValueError("A declarative or script adapter contains only engine, profileId, profileVersion and extract")
         if adapter.get("profileId") is not None:
             validate_id(adapter["profileId"], "adapter.profileId")
-        ensure_valid_extract(adapter.get("extract"))
+        (ensure_valid_script if adapter["engine"] == "script" else ensure_valid_extract)(adapter.get("extract"))
         return
     for field in ("targetValue", "activeWindowSeconds"):
         if field in adapter and adapter[field] is not None and (isinstance(adapter[field], bool) or not isinstance(adapter[field], (int, float))

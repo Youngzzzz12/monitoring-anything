@@ -84,6 +84,13 @@ with read-only rules (globs, regexes, CSV and JSON values, log status):
 
 ![A custom type: cycles, cases and metrics from a test rig's logs](docs/screenshots/case-custom.png)
 
+When rules cannot read a folder (a binary or proprietary format, values computed across files), the agent writes a
+**custom adapter**: a short Python function, `collect(folder, options)`, that returns progress, status, cases and
+metrics. Ask for it in a chat ("monitor D:\Runs\solver; I need the residual per iteration") or through Smart
+monitoring. It is used only if it passes an automatic check (reading modules and calls only; nothing that writes,
+starts programs or goes online), and it runs in a separate process that refuses anything but reading inside the folder.
+The plan card shows its code; once connected or saved as a type, it runs on every collection with no agent involved.
+
 ## Install
 
 Download the installer for your system from [Releases](../../releases) and run it. Python is bundled; nothing else is

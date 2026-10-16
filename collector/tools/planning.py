@@ -13,6 +13,7 @@ from typing import Any
 from adapters import ADAPTERS
 from adapters.common import UTC, iso
 from adapters.declarative import extract_values
+from adapters import script as script_engine
 from adapters.scan import BINARY_SUFFIXES, Budget, ScanLimit, normalize_pattern
 from dashboard_core import VERSION, validate_state
 from onboarding import _validate_adapter, inspect_folder, source_directory
@@ -109,12 +110,14 @@ def preview(vault: Path, request: dict[str, Any], now: dt.datetime | None = None
             result = ADAPTERS[kind](root, adapter, now)
             extra = []
         else:
-            result = extract_values(root, profile["extract"], now)
+            scripted = engine(profile) == "script"
+            result = (script_engine.extract_values if scripted else extract_values)(root, profile["extract"], now)
             warnings.extend(result.pop("_warnings"))
             extra = result.pop("_metrics")
             if not result.pop("_matchedFiles"):
-                errors.append("No file matched the profile's patterns; collection would report an error")
-            response["adapter"] = {"engine": "declarative", "profileId": profile["id"],
+                errors.append("The custom adapter returned no values; collection would report an error" if scripted
+                              else "No file matched the profile's patterns; collection would report an error")
+            response["adapter"] = {"engine": engine(profile), "profileId": profile["id"],
                                    "profileVersion": profile.get("origin", {}).get("version", 1),
                                    "extract": profile["extract"]}
     except (OSError, ValueError, KeyError, TypeError, ScanLimit) as error:

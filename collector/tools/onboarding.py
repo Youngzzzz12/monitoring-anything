@@ -14,6 +14,7 @@ from adapters.common import MAX_LOG_BYTES, UTC
 from dashboard_core import (RESERVED, atomic_json, collect_one, configurations,
                             output_path, read_json, register, validate_config, validate_id)
 from adapters.declarative import ensure_valid_extract
+from adapters.script import ensure_valid_script
 from layout import layout_for
 from project_catalog import (CARDS, KIND_PROJECT_TYPES, create_project_files, missing_output_directories,
                              new_catalog, project_catalogs, project_paths, rollback_created, rollback_directories,
@@ -406,10 +407,10 @@ def _validate_adapter(root: Path, kind: str, adapter: dict[str, Any]) -> None:
 
 
 def _validate_declarative(root: Path, adapter: dict[str, Any]) -> None:
-    """Declarative adapters are validated rule by rule; globs stay inside root."""
-    if set(adapter) - {"engine", "profileId", "profileVersion", "extract"} or adapter.get("engine") != "declarative":
-        raise ValueError("A declarative adapter contains only engine, profileId, profileVersion and extract")
-    ensure_valid_extract(adapter.get("extract"))
+    """Declarative adapters are validated rule by rule (globs stay inside root); custom adapters pass the static check."""
+    if set(adapter) - {"engine", "profileId", "profileVersion", "extract"} or adapter.get("engine") not in {"declarative", "script"}:
+        raise ValueError("A declarative or script adapter contains only engine, profileId, profileVersion and extract")
+    (ensure_valid_script if adapter["engine"] == "script" else ensure_valid_extract)(adapter.get("extract"))
 
 
 def resolve_connection(kind: str | None, adapter: dict[str, Any] | None,
@@ -423,10 +424,10 @@ def resolve_connection(kind: str | None, adapter: dict[str, Any] | None,
     profile_kind = profile_library.source_kind(profile)
     if kind is not None and kind != profile_kind:
         raise ValueError(f"--kind {kind} does not match profile {profile['id']} (kind {profile_kind})")
-    if profile_library.engine(profile) == "declarative":
+    if profile_library.engine(profile) in {"declarative", "script"}:
         if adapter:
-            raise ValueError("A declarative profile supplies its own extraction rules; do not pass adapter JSON")
-        return profile_kind, {"engine": "declarative", "profileId": profile["id"],
+            raise ValueError("A declarative or script profile supplies its own extraction; do not pass adapter JSON")
+        return profile_kind, {"engine": profile_library.engine(profile), "profileId": profile["id"],
                               "profileVersion": profile.get("origin", {}).get("version", 1),
                               "extract": json.loads(json.dumps(profile["extract"]))}
     if adapter is None:

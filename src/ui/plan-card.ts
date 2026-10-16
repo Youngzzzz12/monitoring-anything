@@ -8,8 +8,7 @@
  * folders like it are recognised without an agent next time. Nothing is written until Connect. */
 
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { bestOption, confidenceText, connectRequest, elapsedText, folderTitle, INTERVAL_CHOICES, planOptions, previewRows, ruleSummary,
-  templatesForType, type Inspection, type PlanOption, type PreviewResult, type TemplateSummary, type Validation } from "../model/cli";
+import { adapterCode, bestOption, confidenceText, connectRequest, elapsedText, folderTitle, INTERVAL_CHOICES, planOptions, previewRows, ruleSummary, templatesForType, type Inspection, type PlanOption, type PreviewResult, type TemplateSummary, type Validation } from "../model/cli";
 import { eligibleParents, errorMessage, isSafeId, normalizeParentId, PROJECT_TYPES, slugId, uniqueProjectId, type HierarchyItem } from "../model/rules";
 import type { AgentSetupHandle } from "./agent-setup";
 import { dropdown, fillSelect, h, Modal, setBusy, setting, textInput, toggle } from "./modal";
@@ -411,6 +410,7 @@ export class PlanCard {
       });
     }
     if (selected) this.renderPlanProblems(section, selected);
+    if (selected) this.renderAdapterCode(section, selected);
     if (this.legacy() && this.inspection?.warnings?.length) this.renderNotes(section, this.inspection.warnings);
     if (this.agent.setup) { this.renderAgentSetupStep(section); return; }
     if (!this.legacy() && selected && !this.agent.open && !this.agent.running && !this.agentPlan) this.renderAgentChoices(section, true);
@@ -449,6 +449,7 @@ export class PlanCard {
     h(top, "span", { text: option.title, cls: "rd-plan-option-title" });
     const origin = option.mode === "agent" ? "Agent plan" : option.mode === "custom" ? "Edited" : option.savedAs || option.origin === "user" ? "Saved type" : option.mode === "legacy" ? "Detected" : "Built-in";
     h(top, "span", { text: origin, cls: "rd-plan-chip" });
+    if (option.engine === "script" || adapterCode(option.profile)) h(top, "span", { text: "Custom adapter", cls: "rd-plan-chip is-adapter" });
     if (option.mode === "library") {
       const confidence = h(top, "span", { cls: "rd-plan-confidence" });
       h(confidence, "span", { text: confidenceText(option.confidence) });
@@ -473,6 +474,19 @@ export class PlanCard {
       h(body, "p", { text: ruleSummary(option.missed, 1).shown[0] || "", cls: "rd-plan-caption" });
     }
     if (checked) { this.summaryEl = h(body, "ul", { cls: "rd-plan-rules rd-connect-summary" }); this.renderProfileSummary(); }
+  }
+
+  /** A plan with a custom adapter: what it is, that it passed the automatic check, and its code to read. */
+  private renderAdapterCode(section: HTMLElement, option: PlanOption): void {
+    const code = adapterCode(option.profile);
+    if (!code) return;
+    const box = h(section, "details", { cls: "rd-plan-adapter" });
+    const summary = h(box, "summary");
+    h(summary, "span", { text: "Custom adapter", cls: "rd-plan-adapter-title" });
+    const checked = option.validation?.ok !== false;
+    h(summary, "span", { text: `Python · ${code.split("\n").length} lines · ${checked ? "passed the automatic check" : "did not pass the automatic check"}`, cls: "rd-plan-caption" });
+    h(box, "p", { cls: "rd-plan-caption", text: "Written for this folder because the built-in types and rules cannot read it. It may only read files: it runs in a separate process that refuses writing, starting programs and network access." });
+    h(h(box, "pre", { cls: "rd-plan-adapter-code" }), "code", { text: code });
   }
 
   /** An invalid agent plan: one plain sentence and a fix action; the validator's messages wait under Details. */
@@ -666,7 +680,7 @@ export class PlanCard {
     const projectType = Object.hasOwn(PROJECT_TYPES, String(project.type)) ? String(project.type) : Object.hasOwn(PROJECT_TYPES, String(profile.projectType)) ? String(profile.projectType) : "other";
     const extract = (profile.extract && typeof profile.extract === "object" ? profile.extract : {}) as Record<string, unknown>;
     this.agentPlan = {
-      key: "agent", mode: "agent", profileId: null, title: String(profile.title || "Agent plan"), origin: "agent", engine: "declarative", sourceKind: null,
+      key: "agent", mode: "agent", profileId: null, title: String(profile.title || "Agent plan"), origin: "agent", engine: adapterCode(profile) ? "script" : "declarative", sourceKind: null,
       plan, profile, adapter: preview?.adapter && extract.adapter ? preview.adapter : null, rationale: plan.rationale ? String(plan.rationale) : "",
       warnings, validation, preview, projectType, milestoneTemplate: (profile.milestoneTemplate ?? null) as PlanOption["milestoneTemplate"],
       confidence: 1, threshold: 0, meetsThreshold: true, matched: [], missed: [], entries: [], repaired: Boolean(response.repaired),
@@ -1162,7 +1176,7 @@ export class PlanCard {
       /* A saved declarative type connects by ID, so the source follows later edits to the type. */
       const declarativeSaved = option.savedAs && !(option.profile?.extract as Record<string, unknown> | undefined)?.adapter;
       const choice = declarativeSaved
-        ? { option: { ...option, mode: "library" as const, profileId: option.savedAs!, engine: "declarative" as const, entries: [] } }
+        ? { option: { ...option, mode: "library" as const, profileId: option.savedAs!, engine: adapterCode(option.profile) ? "script" as const : "declarative" as const, entries: [] } }
         : { option, entryId: this.profileId, profile: this.planProfile(option), adapter: option.adapter || null };
       request = connectRequest({ source: this.sourcePath, id: this.projectId, title: this.projectTitle.trim(), interval: this.interval,
         dashboardProjectId: this.dashboardProjectId || null, projectType: this.projectType, parentId: this.parentId || null,

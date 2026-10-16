@@ -335,3 +335,12 @@ body.rd-motion-off :is(.rd-drop-overlay, .rd-drop-card) { animation: none; trans
 .rd-agent-skill-state.is-installed { color: var(--text-normal); }
 .rd-agent-skill-state.is-installed::before { content: "✓ "; color: var(--rd-progress, #24ab9c); font-weight: 700; }
 .rd-agent-skill-all { justify-self: start; margin-top: 4px; }
+
+/* A custom adapter on the plan card: a chip on the option and its code under a disclosure. */
+.rd-plan-chip.is-adapter { color: var(--rd-plan-accent, var(--text-normal)); box-shadow: inset 0 0 0 1px currentColor; background: transparent; }
+.rd-plan-adapter { margin-top: 8px; padding: 10px 12px; border-radius: var(--rd-plan-radius); box-shadow: inset 0 0 0 1px var(--rd-plan-line); }
+.rd-plan-adapter > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; cursor: pointer; }
+.rd-plan-adapter-title { font-weight: 600; font-size: 13px; }
+.rd-plan-adapter > p { margin: 8px 0 6px; }
+.rd-plan-adapter-code { max-height: 260px; overflow: auto; margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--background-primary-alt, rgb(0 0 0 / 4%));
+  font: 11.5px/1.5 var(--font-monospace, ui-monospace, "Cascadia Code", Consolas, monospace); white-space: pre; tab-size: 4; }

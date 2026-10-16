@@ -8,8 +8,9 @@ edit verifies the exact line first), connections through the app, which shows it
   ma report [--project ID] [--limit N]       progress: completion, Next up, overdue, sources (as the dashboard shows)
   ma brief                                   how to design a monitoring plan (rules, schema, example, saved types)
   ma inspect --folder PATH                   detected monitoring types for a folder
-  ma preview --folder PATH (--profile-id ID | --plan FILE)   what a plan would read now (dry run)
-  ma connect --folder PATH [--plan FILE | --profile-id ID] [--title T] [--parent ID]
+  ma preview --folder PATH (--profile-id ID | --plan FILE [--script FILE.py])   what a plan would read now (dry run;
+                                             a custom adapter is checked and run read-only)
+  ma connect --folder PATH [--plan FILE [--script FILE.py] | --profile-id ID] [--title T] [--parent ID]
                                              open the plan card in the app, prefilled, for the user to confirm
   ma milestone list|add|done|undo|rename|due|delete --project ID ...
   ma collector ARGS...                       any collector command (advanced)
@@ -452,8 +453,11 @@ def collector(root: Path, argv: list[str], stdin: str | None = None) -> Any:
     return value
 
 
-def read_plan(path: str | None) -> dict[str, Any] | None:
+def read_plan(path: str | None, script: str | None = None) -> dict[str, Any] | None:
+    """The plan JSON; with --script, the adapter file's code becomes profile.extract.script.code (keeping its options)."""
     if not path:
+        if script:
+            raise Problem("--script needs --plan (the plan supplies detect, title and type)")
         return None
     try:
         plan = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -461,11 +465,20 @@ def read_plan(path: str | None) -> dict[str, Any] | None:
         raise Problem(f"Could not read the plan JSON: {error}") from error
     if not isinstance(plan, dict):
         raise Problem("The plan must be a JSON object ({profile, project?, milestones?, rationale?})")
+    if script:
+        try:
+            code = Path(script).read_text(encoding="utf-8")
+        except OSError as error:
+            raise Problem(f"Could not read the adapter: {error}") from error
+        profile = plan.get("profile") if isinstance(plan.get("profile"), dict) else plan
+        current = (profile.get("extract") or {}).get("script") if isinstance(profile.get("extract"), dict) else None
+        profile["extract"] = {"script": {**(current if isinstance(current, dict) else {}), "language": "python", "code": code}}
     return plan
 
 
 def brief(root: Path) -> dict[str, Any]:
     import agents
+    from adapters.script import CONTRACT
     from milestones import list_templates, template_summary
     library = collector(root, ["profiles", "list"])
     templates, _ = list_templates(root)
@@ -474,7 +487,12 @@ def brief(root: Path) -> dict[str, Any]:
                       "Design a plan: {schemaVersion: '1.0', profile: {...}, project: {title, type, parentSuggestion?}, rationale}.",
                       "Write it to a temporary .json file; check it with `ma preview --folder F --plan FILE` until preview.ok is true and the values look right.",
                       "Then `ma connect --folder F --plan FILE`: the app opens its plan card prefilled and the user confirms.",
-                      "Prefer an existing type when `ma inspect` already matches well (use --profile-id instead of --plan)."],
+                      "Prefer an existing type when `ma inspect` already matches well (use --profile-id instead of --plan).",
+                      "Only when declarative rules cannot read what is needed: write a custom adapter (rules, rule 8) to a temporary "
+                      "adapter.py and add `--script adapter.py` to preview and connect (the plan keeps detect, title and type; its "
+                      "extract becomes the script). Iterate until preview.ok is true: errors name the failing check or the adapter's "
+                      "exception and line. Write nothing into the folder itself."],
+            "adapterContract": CONTRACT,
             "rules": agents.RULES, "example": agents.EXAMPLE_PLAN,
             "schema": json.loads(agents.SCHEMA_PATH.read_text(encoding="utf-8")),
             "savedTypes": [{"id": item.get("id"), "title": item.get("title"), "origin": item.get("origin")} for item in (library or {}).get("profiles", [])],
@@ -485,7 +503,7 @@ def connect(root: Path, args: argparse.Namespace) -> dict[str, Any]:
     folder = Path(args.folder)
     if not folder.is_absolute() or not folder.is_dir():
         raise Problem("--folder must be an existing absolute folder")
-    plan = read_plan(args.plan)
+    plan = read_plan(args.plan, args.script)
     if plan is not None:
         profile = plan.get("profile") if isinstance(plan.get("profile"), dict) else plan
         checked = collector(root, ["profiles", "validate"], json.dumps({"profile": profile}))
@@ -522,9 +540,11 @@ def parser() -> argparse.ArgumentParser:
     pre.add_argument("--folder", required=True)
     pre.add_argument("--profile-id")
     pre.add_argument("--plan")
+    pre.add_argument("--script", help="A custom adapter (.py) to embed in the plan")
     con = sub.add_parser("connect")
     con.add_argument("--folder", required=True)
     con.add_argument("--plan")
+    con.add_argument("--script", help="A custom adapter (.py) to embed in the plan")
     con.add_argument("--profile-id")
     con.add_argument("--title")
     con.add_argument("--parent")
@@ -557,7 +577,7 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
     if args.command == "inspect":
         return {"ok": True, **collector(root, ["inspect", "--source", args.folder])}
     if args.command == "preview":
-        plan = read_plan(args.plan)
+        plan = read_plan(args.plan, args.script)
         if not plan and not args.profile_id:
             raise Problem("Give --profile-id ID or --plan FILE")
         request = {"source": args.folder, "profileId": args.profile_id} if args.profile_id else {"source": args.folder, "profile": plan.get("profile") if isinstance(plan.get("profile"), dict) else plan}

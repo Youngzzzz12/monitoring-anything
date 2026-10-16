@@ -525,4 +525,21 @@ describe("ma connect", () => {
     expect(JSON.parse(fake.connect.mock.calls[0][0].input).profile.id).toBe("fake-runs");
     await until(() => !document.querySelector(".rd-plan-card"));
   });
+
+  it("shows a custom adapter's code on the card and connects the plan with it inline", async () => {
+    const fake = host();
+    const code = ["import struct", "", "def collect(folder, options):", "    return {\"step\": \"ok\"}", ""].join("\n");
+    const plan = { schemaVersion: "1.0", profile: { id: "binary-solver", title: "Binary solver", projectType: "simulation", detect: { allOf: [{ glob: "out/*.bin" }] },
+      extract: { script: { language: "python", code } } }, project: { title: "Solver run", type: "simulation" }, rationale: "Residuals are binary." };
+    planCard(fake, { source: "C:/runs", preset: { plan, fromAgent: true } });
+    await until(() => document.querySelector(".rd-plan-adapter"));
+    expect(document.querySelector(".rd-plan-option.is-selected .rd-plan-chip.is-adapter")!.textContent).toBe("Custom adapter");
+    expect(document.querySelector(".rd-plan-adapter-code")!.textContent).toBe(code);
+    expect(document.querySelector(".rd-plan-adapter summary")!.textContent).toMatch(/Python · 5 lines · passed the automatic check/);
+    await until(() => document.querySelector(".rd-plan-progress-caption"));
+    (document.querySelector(".rd-plan-connect") as HTMLButtonElement).click();
+    await until(() => fake.connect.mock.calls.length);
+    expect(JSON.parse(fake.connect.mock.calls[0][0].input).profile.extract.script.code).toBe(code);
+    await until(() => !document.querySelector(".rd-plan-card"));
+  });
 });

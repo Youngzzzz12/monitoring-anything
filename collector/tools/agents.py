@@ -39,7 +39,8 @@ from dashboard_core import atomic_json, output_path
 from milestones import list_templates, template_summary
 from onboarding import source_directory
 from planning import compile_excludes, manifest, preview
-from profiles import builtin_ids, find_profile, load_library, validate_profile
+from profiles import builtin_ids, engine as profile_engine, find_profile, load_library, validate_profile
+from adapters.script import CONTRACT
 from project_catalog import PROJECT_TYPES
 
 RUNS_FOLDER = "Research Dashboard/System/data/agent-runs"
@@ -110,8 +111,9 @@ PRESETS: list[dict[str, Any]] = [
               "Set agentic true if the tool can browse the working directory itself."},
 ]
 
-SYSTEM_PROMPT = ("You design read-only, declarative monitoring profiles for a research dashboard. "
-                 "You never write, modify, move or execute anything. Reply with exactly one JSON object.")
+SYSTEM_PROMPT = ("You design read-only monitoring profiles for a research dashboard: declarative rules, or a small "
+                 "read-only Python adapter when rules cannot express what is needed. You never write, modify, move or "
+                 "execute anything in the folder. Reply with exactly one JSON object.")
 
 EXAMPLE_PLAN = {
     "schemaVersion": "1.0",
@@ -141,7 +143,9 @@ RULES = """\
 Design rules (all mandatory):
 1. Read-only. Do not create, edit, move or delete any file, and do not run programs, solvers, scripts or shell commands.
    You may look only at file and folder names and short excerpts of small text files.
-2. Output a declarative monitoring profile only: no code, no commands, no scripts. Nothing you write will be executed.
+2. Choose the simplest thing that works, in this order: an existing profile (top-level "profileId"); a declarative
+   profile (rules 3-5); only when those primitives cannot express what is needed (binary or proprietary formats, values
+   that need computing across files), a custom adapter (rule 8). Say in the rationale why a custom adapter was needed.
 3. Detection (profile.detect) uses only rules {"glob": "...", "minCount"?: n} or
    {"contains": {"glob": "...", "regex": "...", "maxBytes"?: n}} in allOf / anyOf / noneOf (at most 20 rules), plus an
    optional threshold in (0, 1]. All allOf and at least one anyOf rule must match; any noneOf match excludes.
@@ -162,6 +166,15 @@ Design rules (all mandatory):
    existence as completion unless the folder's conventions clearly say so; leave values unknown rather than guess.
 7. profile.id: a new lowercase id (a-z, 0-9, -, _), not equal to a built-in id. projectType is one of
    thesis, paper, simulation, experiment, other. sourceKind (display family) is latex, abaqus or isale.
+8. Custom adapter: profile.extract = {"script": {"language": "python", "code": "<source>", "options"?: {...},
+   "timeoutSeconds"?: 1-60}} (detect stays declarative). The code defines collect(folder, options) and returns plain
+   values; it may only read files under folder (pathlib, os.scandir, open(..., "r"/"rb")), import only standard
+   reading/parsing modules (json, csv, re, math, statistics, struct, zipfile, gzip, xml, datetime, pathlib, os, ...)
+   or numpy/h5py/scipy/pandas/openpyxl when available, and must not write, delete, start programs, use the network,
+   eval/exec or touch dunder internals: such code fails the automatic check and never runs. It runs in a separate
+   process that refuses anything but reading inside the folder. Keep it short, bounded (read file tails, cap loops) and
+   tolerant: missing files give warnings, not exceptions. Contract:
+""" + CONTRACT + """
 """
 
 
@@ -304,7 +317,7 @@ def _library_context(vault: Path) -> dict[str, Any]:
         profile = entry["profile"]
         item = {"id": profile["id"], "origin": entry["origin"], "title": profile["title"],
                 "description": profile.get("description"), "projectType": profile["projectType"],
-                "engine": "adapter" if "adapter" in profile.get("extract", {}) else "declarative",
+                "engine": profile_engine(profile),
                 "detect": profile.get("detect"), "subprojectRole": profile.get("subprojectRole", "standalone"),
                 "milestoneTemplate": profile.get("milestoneTemplate")}
         if entry["origin"] == "user" and len(json.dumps(profile.get("extract"))) <= 4000:

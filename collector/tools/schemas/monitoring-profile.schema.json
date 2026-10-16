@@ -38,7 +38,14 @@
         {"type": "object", "required": ["adapter"], "additionalProperties": false,
          "properties": {"adapter": {"enum": ["latex", "abaqus", "isale"]}},
          "description": "Use an existing adapter; connect needs the inspected adapter options (inspect --source ... profiles[].adapter)."},
-        {"$ref": "#/$defs/declarative"}
+        {"$ref": "#/$defs/declarative"},
+        {"type": "object", "required": ["script"], "additionalProperties": false,
+         "description": "A custom adapter: Python source defining collect(folder, options) -> dict (status, progress, step, cases, metrics, artifacts, files, warnings). Used only when the declarative primitives cannot express the extraction. It must pass the automatic check (read-only modules and calls; no writing, programs, network, eval/exec) and runs in a separate process that refuses anything but reading inside the folder.",
+         "properties": {"script": {"type": "object", "required": ["code"], "additionalProperties": false, "properties": {
+           "language": {"const": "python"}, "code": {"type": "string", "minLength": 1, "maxLength": 65536},
+           "options": {"type": "object", "description": "Passed to collect() as its second argument."},
+           "timeoutSeconds": {"type": "number", "minimum": 1, "maximum": 60, "default": 20},
+           "description": {"type": "string", "maxLength": 1000}}}}}
       ]
     },
     "milestoneTemplate": {

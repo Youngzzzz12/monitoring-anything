@@ -17,6 +17,7 @@ from typing import Any
 
 from adapters.common import UTC, iso
 from adapters.declarative import validate_extract
+from adapters.script import validate_script_extract
 from adapters.scan import Budget, Scanner, ScanLimit, normalize_pattern, validate_regex
 from dashboard_core import KINDS, atomic_json, output_path, read_json, validate_id
 from layout import layout_for
@@ -154,6 +155,8 @@ def validate_profile(profile: Any) -> tuple[list[str], list[str]]:
             errors.append("extract.adapter must be one of: " + ", ".join(sorted(KINDS)))
         elif profile.get("sourceKind", extract["adapter"]) != extract["adapter"]:
             errors.append("sourceKind must equal extract.adapter for adapter-backed profiles")
+    elif isinstance(extract, dict) and "script" in extract:
+        errors.extend(validate_script_extract(extract))
     else:
         errors.extend(validate_extract(extract))
     template = profile.get("milestoneTemplate")
@@ -188,7 +191,9 @@ def ensure_valid(profile: Any) -> dict[str, Any]:
 
 
 def engine(profile: dict[str, Any]) -> str:
-    return "adapter" if "adapter" in profile.get("extract", {}) else "declarative"
+    """adapter (a built-in adapter), script (a custom adapter written for the folder) or declarative (rules)."""
+    extract = profile.get("extract", {})
+    return "adapter" if "adapter" in extract else "script" if "script" in extract else "declarative"
 
 
 def source_kind(profile: dict[str, Any]) -> str:

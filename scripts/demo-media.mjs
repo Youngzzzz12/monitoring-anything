@@ -18,8 +18,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const [what = "all", ...only] = process.argv.slice(2);
 const wanted = name => !only.length || only.includes(name);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-/* A desktop-like backdrop behind the transparent widget window. */
-const backdrop = "html, body { background: linear-gradient(135deg, #2f3f5c 0%, #5d7290 55%, #9aa9b8 100%) !important; }";
+/* A plain white backdrop behind the transparent widget window. */
+const backdrop = "html, body { background: #fff !important; }";
 const desktop = { width: 1280, height: 820 };
 
 /* Eased pointer movement, so recordings show the hover effects as a person would trigger them. */
@@ -45,7 +45,7 @@ const SCREENSHOTS = [
 ];
 
 const SCENES = [
-  { name: "widget", query: "?window=widget&theme=dark", size: { width: 340, height: 560 }, scheme: "dark", play: async page => {
+  { name: "widget", query: "?window=widget&theme=light", size: { width: 340, height: 560 }, scheme: "light", play: async page => {
     await page.addStyleTag({ content: backdrop });
     await page.mouse.move(330, 4);
     await sleep(500);
@@ -62,7 +62,7 @@ const SCENES = [
     await page.locator(".rd-mini-back").click();
     await sleep(1400);
   } },
-  { name: "orb", query: "?window=widget&shape=orb&theme=dark&focus=project-a", size: { width: 300, height: 230 }, scheme: "dark", play: async page => {
+  { name: "orb", query: "?window=widget&shape=orb&theme=light&focus=project-a", size: { width: 300, height: 230 }, scheme: "light", play: async page => {
     await page.addStyleTag({ content: backdrop });
     await page.mouse.move(290, 10);
     await sleep(700);

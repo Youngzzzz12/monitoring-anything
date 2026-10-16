@@ -10,7 +10,7 @@ import { buildModel } from "../src/model/load";
 import { planCard, type PlanCardHost } from "../src/ui/plan-card";
 import { mountView, type ActionBridge } from "../src/view/view";
 import { snapshot } from "./fixtures";
-import { OrbControl } from "../src/app/widget";
+import { fanExtent, fanOffset, OrbControl } from "../src/app/widget";
 
 const wait = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 async function until(check: () => unknown, timeout = 2000) {
@@ -184,47 +184,56 @@ describe("widget as a circle", () => {
   const mountOrb = async (focusProjectId: string | null) => {
     const container = document.createElement("div");
     document.body.appendChild(container);
-    const bridge: ActionBridge = { getStatus: () => ({ running: false, busy: false, focusProjectId }), openProject: vi.fn(), focusChapter: vi.fn() };
+    const bridge: ActionBridge = { getStatus: () => ({ running: false, busy: false, focusProjectId }), openProject: vi.fn(), openOverall: vi.fn(), focusChapter: vi.fn() };
     const handle = mountView(container, { mode: "orb" }, { load: async () => buildModel(snapshot()), bridge, navigate: vi.fn(), openExternal: vi.fn(), openWorkspaceFile: vi.fn(), subscribe: () => () => {} });
     await handle.painted;
     return { container, handle, bridge };
   };
+  const names = (container: HTMLElement) => Array.from(container.querySelectorAll(".rd-orb-item:not(.rd-orb-open) .rd-orb-label-name")).map(node => node.textContent);
 
-  it("shows the completion ring and the breakdown: projects, sub-projects or a paper's chapters", async () => {
+  it("shows only the ring and the percentage, and fans out projects, sub-projects or a paper's chapters", async () => {
     /* All projects: the average by top-level project (thesis family 2/5, simulation 1/1). */
     const all = await mountOrb(null);
-    expect(all.container.querySelector(".rd-mini-header, .rd-module-header")?.closest("header")?.hidden).toBe(true);
+    expect(all.container.querySelector("header")?.hidden).toBe(true);
     expect(all.container.querySelector(".rd-orb-value")!.textContent).toBe("70%");
-    expect(Array.from(all.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["PhD thesis", "Impact runs"]);
-    (all.container.querySelector(".rd-orb-row") as HTMLButtonElement).click();
+    expect(names(all.container)).toEqual(["PhD thesis", "Impact runs"]);
+    expect(all.container.querySelector(".rd-orb-open")!.textContent).toMatch(/^Open dashboard/);
+    (all.container.querySelector(".rd-orb-item") as HTMLButtonElement).click();
     await until(() => (all.bridge.openProject as ReturnType<typeof vi.fn>).mock.calls.length);
     expect(all.bridge.openProject).toHaveBeenCalledWith("thesis", expect.anything());
     all.handle.dispose();
     const thesis = await mountOrb("thesis");
-    expect(thesis.container.querySelector(".rd-orb-title")!.textContent).toBe("PhD thesis");
     expect(thesis.container.querySelector(".rd-orb-value")!.textContent).toBe("40%");
-    expect(Array.from(thesis.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["Framework paper"]);
+    expect(names(thesis.container)).toEqual(["Framework paper"]);
+    expect(thesis.container.querySelector(".rd-orb-open")!.textContent).toMatch(/^Open PhD thesis/);
     thesis.handle.dispose();
     const paper = await mountOrb("paper");
-    expect(Array.from(paper.container.querySelectorAll(".rd-orb-row-name")).map(node => node.textContent)).toEqual(["Introduction", "Method"]);
-    expect(paper.container.querySelector(".rd-orb-row-value")!.textContent).toBe("100%");
+    expect(names(paper.container)).toEqual(["Introduction", "Method"]);
+    expect(paper.container.querySelector(".rd-orb-label-value")!.textContent).toBe("100%");
     paper.handle.dispose();
   });
 
-  it("opens the flyout on hover beside the circle, closes it on leave and expands on a click", async () => {
+  it("fans out on hover along a curve away from the screen edge, folds back on leave and expands on a click", async () => {
+    expect(fanExtent(3)[1]).toBeGreaterThan(fanExtent(2)[1]);
+    expect(fanOffset(2).dx).toBeGreaterThan(fanOffset(1).dx);
     const { container, handle } = await mountOrb(null);
     const frame = container;
     const shape = vi.fn(async (kind: "panel" | "orb" | "flyout") => kind === "flyout"
-      ? { shape: "flyout" as const, side: "left" as const, orbX: 250, orbY: 0, width: 322, height: 140 }
-      : { shape: "orb" as const, side: "right" as const, orbX: 0, orbY: 0, width: 72, height: 72 });
+      ? { shape: "flyout" as const, side: "left" as const, vertical: "down" as const, orbX: 200, orbY: 0, width: 272, height: 200 }
+      : { shape: "orb" as const, side: "right" as const, vertical: "up" as const, orbX: 0, orbY: 0, width: 72, height: 72 });
     const expand = vi.fn();
     const control = new OrbControl(frame, expand, shape);
     control.pointer(true);
     await until(() => frame.classList.contains("is-flyout-open"));
-    expect(shape).toHaveBeenCalledWith("flyout", expect.any(Array));
+    expect(shape).toHaveBeenCalledWith("flyout", fanExtent(3));
     expect(frame.dataset.side).toBe("left");
-    expect(frame.style.getPropertyValue("--rd-orb-x")).toBe("250px");
-    expect(frame.style.getPropertyValue("--rd-flyout-x")).toBe("0px");
+    expect(frame.dataset.vertical).toBe("down");
+    /* Down and to the left of a circle centred at (236, 36): the first item straight below, the next ones curving left. */
+    const items = Array.from(container.querySelectorAll<HTMLElement>(".rd-orb-item"));
+    expect(items[0].style.getPropertyValue("--rd-fx")).toBe("236.0px");
+    expect(items[0].style.getPropertyValue("--rd-fy")).toBe((36 + fanOffset(0).dy).toFixed(1) + "px");
+    expect(parseFloat(items[1].style.getPropertyValue("--rd-fx"))).toBeLessThan(236);
+    expect(items[0].style.getPropertyValue("--rd-from-y")).toBe((-fanOffset(0).dy).toFixed(1) + "px");
     control.pointer(false);
     expect(frame.classList.contains("is-flyout-open")).toBe(false);
     await until(() => shape.mock.calls.some(call => call[0] === "orb"), 1000);

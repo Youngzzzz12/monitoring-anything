@@ -372,9 +372,10 @@ body.rd-motion-off .rd-dashboard .rd-mini-bar-fill { transition: none; animation
 .rd-dashboard select.rd-task-composer-pick[hidden] { display: none; }
 
 /* ---------- Widget as a circle (orb) ----------
- * The window is a 72 px square holding a 64 px circle (completion ring and percentage). On hover the window widens and
- * the flyout (the breakdown) fades in beside the circle; --rd-orb-x/y place the circle inside the window and
- * --rd-flyout-x/y the flyout (set by OrbControl from the Rust layout). */
+ * The window is a 72 px square holding the 64 px ring (no disc: only the ring and the percentage, with a soft shadow so
+ * they read on any desktop). On hover the window grows and the fan items spring out of the circle to their places on
+ * the curve (--rd-fx/--rd-fy, the ring's centre), one after another, and fold back in reverse. OrbControl sets
+ * --rd-orb-x/y (the circle inside the window) and each item's position from the Rust layout. */
 .rd-widget-shrink { position: absolute; top: 2px; right: 26px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-faint); cursor: pointer; }
 .rd-widget-shrink::before { content: ""; position: absolute; inset: 4px; border: 1.5px solid currentColor; border-radius: 50%; }
 .rd-widget-shrink:hover { background: var(--rd-chip-hover, rgb(28 30 36 / 10%)); color: var(--text-normal); }
@@ -383,42 +384,52 @@ body.rd-orb-window .rd-widget-grip, body.rd-orb-window .rd-skeleton { display: n
 body.rd-orb-window .rd-widget-frame :is(.rd-native-dashboard, .rd-app-panel, .rd-dashboard, .rd-module, .rd-content) {
   padding: 0; margin: 0; border: 0; background: transparent; box-shadow: none; min-height: 0; overflow: visible;
 }
+.rd-dashboard :is(.rd-orb-dial, .rd-orb-item) { --rd-orb-shadow: drop-shadow(0 1px 1.5px rgb(0 0 0 / 55%)) drop-shadow(0 0 6px rgb(0 0 0 / 25%)); }
+body.theme-light .rd-dashboard :is(.rd-orb-dial, .rd-orb-item) { --rd-orb-shadow: drop-shadow(0 0 1.5px rgb(255 255 255 / 90%)) drop-shadow(0 1px 4px rgb(0 0 0 / 22%)); }
+.rd-dashboard .rd-orb-ring { display: block; overflow: visible; filter: var(--rd-orb-shadow); }
+/* Mid grey: visible on light and dark desktops alike (the desktop, not the theme, is behind the ring). */
+.rd-dashboard .rd-orb-track { stroke: rgb(150 152 160 / 55%); }
+.rd-dashboard .rd-orb-arc { stroke: var(--rd-progress, #24ab9c); }
 .rd-dashboard .rd-orb-dial {
   position: fixed; left: calc(var(--rd-orb-x, 0px) + 4px); top: calc(var(--rd-orb-y, 0px) + 4px); width: 64px; height: 64px;
-  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: grab;
-  background: var(--background-secondary); box-shadow: inset 0 0 0 1px var(--background-modifier-border), 0 1px 3px rgb(0 0 0 / 22%);
+  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; box-shadow: none; cursor: grab;
   transition: scale 520ms var(--rd-widget-spring, ease);
 }
 .rd-dashboard .rd-orb-dial:hover, .rd-widget-frame.is-flyout-open .rd-orb-dial { scale: 1.06; }
 .rd-dashboard .rd-orb-dial:active { cursor: grabbing; scale: .97; }
 .rd-dashboard .rd-orb-dial:focus-visible { outline: 2px solid var(--rd-text, var(--text-normal)); outline-offset: 1px; }
-.rd-dashboard .rd-orb-dial > svg { grid-area: 1 / 1; width: 58px; height: 58px; }
+.rd-dashboard .rd-orb-dial > .rd-orb-ring { grid-area: 1 / 1; width: 64px; height: 64px; }
 .rd-dashboard .rd-orb-center { grid-area: 1 / 1; display: grid; place-items: center; pointer-events: none; }
-.rd-dashboard .rd-orb-value { font-size: 14px; font-weight: 700; letter-spacing: -.02em; color: var(--rd-text, var(--text-normal)); font-variant-numeric: tabular-nums; }
-.rd-dashboard .rd-orb-flyout {
-  position: fixed; left: var(--rd-flyout-x, 78px); top: var(--rd-flyout-y, 0px); width: 244px; box-sizing: border-box; padding: 11px 14px 10px;
-  border-radius: 14px; background: var(--background-secondary); box-shadow: inset 0 0 0 1px var(--background-modifier-border);
-  visibility: hidden; opacity: 0; translate: -8px 0;
-  transition: opacity 160ms var(--rd-widget-ease, ease), translate 240ms var(--rd-widget-ease, ease), visibility 0s linear 160ms;
+.rd-dashboard .rd-orb-value { font-size: 15px; font-weight: 700; letter-spacing: -.02em; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgb(0 0 0 / 65%), 0 0 8px rgb(0 0 0 / 35%); }
+body.theme-light .rd-dashboard .rd-orb-value { color: #1c1e24; text-shadow: 0 0 2px rgb(255 255 255 / 95%), 0 0 8px rgb(255 255 255 / 70%); }
+.rd-dashboard .rd-orb-fan { position: fixed; inset: 0; pointer-events: none; }
+.rd-dashboard .rd-orb-item {
+  position: fixed; left: var(--rd-fx, 36px); top: var(--rd-fy, 36px); display: flex; align-items: center; gap: 8px; padding: 0; border: 0;
+  background: transparent; color: var(--rd-text, var(--text-normal)); font: inherit; cursor: pointer; white-space: nowrap;
+  translate: -15px -50%; transform-origin: 15px 50%;
+  transform: translate(var(--rd-from-x, 0px), var(--rd-from-y, 0px)) scale(.3); opacity: 0; pointer-events: none;
+  transition: transform 240ms cubic-bezier(.4, 0, 1, 1), opacity 180ms ease-in;
+  transition-delay: calc(var(--rd-fan-back, 0) * 22ms);
 }
-.rd-widget-frame[data-side="left"] .rd-orb-flyout { translate: 8px 0; }
-.rd-widget-frame.is-flyout-open .rd-orb-flyout {
-  visibility: visible; opacity: 1; translate: 0 0;
-  transition: opacity 200ms var(--rd-widget-ease, ease), translate 420ms var(--rd-widget-spring, ease), visibility 0s;
+.rd-widget-frame[data-side="left"] .rd-orb-item { flex-direction: row-reverse; translate: calc(-100% + 15px) -50%; transform-origin: calc(100% - 15px) 50%; }
+.rd-widget-frame.is-flyout-open .rd-orb-item {
+  transform: none; opacity: 1; pointer-events: auto;
+  transition: transform 560ms var(--rd-widget-spring, cubic-bezier(.16, 1, .3, 1)), opacity 160ms ease-out;
+  transition-delay: calc(var(--rd-fan-index, 0) * 38ms);
 }
-.rd-dashboard .rd-orb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.rd-dashboard .rd-orb-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; color: var(--rd-text, var(--text-normal)); }
-.rd-dashboard .rd-orb-percent { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.rd-dashboard .rd-orb-list { display: grid; gap: 1px; margin: 7px -6px 5px; }
-.rd-dashboard .rd-orb-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 60px 34px; align-items: center; gap: 10px; width: 100%; padding: 5px 6px;
-  border: 0; border-radius: 8px; background: transparent; color: var(--rd-text, var(--text-normal)); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+.rd-dashboard .rd-orb-item-ring { display: grid; place-items: center; width: 30px; height: 30px; flex: none; transition: scale 360ms var(--rd-widget-spring, ease); }
+.rd-dashboard .rd-orb-item-ring > .rd-orb-ring { width: 30px; height: 30px; }
+.rd-dashboard .rd-orb-item:hover .rd-orb-item-ring { scale: 1.12; }
+.rd-dashboard .rd-orb-label {
+  display: flex; align-items: baseline; gap: 8px; max-width: 176px; box-sizing: border-box; padding: 4px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--background-secondary) 94%, transparent);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border), 0 2px 10px -2px rgb(0 0 0 / 35%); font-size: 12px; line-height: 1.35;
+  transition: background-color 160ms ease;
 }
-.rd-dashboard .rd-orb-row:hover { background: var(--rd-chip-hover, rgb(28 30 36 / 8%)); }
-.rd-dashboard .rd-orb-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-dashboard .rd-orb-row-track { height: 5px; overflow: hidden; border-radius: 999px; background: var(--rd-line, rgb(128 128 128 / 22%)); }
-.rd-dashboard .rd-orb-row-fill { display: block; height: 100%; border-radius: inherit; background: var(--rd-progress, #24ab9c); }
-.rd-dashboard .rd-orb-row-value { text-align: right; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.rd-dashboard .rd-orb-caption { margin: 0; font-size: 11.5px; color: var(--text-faint); }
-body.rd-motion-off .rd-dashboard .rd-orb-dial, body.rd-motion-off .rd-dashboard .rd-orb-flyout { transition: none; }
-@media (prefers-reduced-motion: reduce) { .rd-dashboard .rd-orb-dial, .rd-dashboard .rd-orb-flyout { transition: none; } }
+.rd-dashboard .rd-orb-item:hover .rd-orb-label { background: var(--background-primary, var(--background-secondary)); }
+.rd-dashboard .rd-orb-label-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 550; }
+.rd-dashboard .rd-orb-label-value { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rd-dashboard .rd-orb-open .rd-orb-label { margin-left: 15px; color: var(--text-muted); font-weight: 500; }
+.rd-widget-frame[data-side="left"] .rd-orb-open .rd-orb-label { margin-left: 0; margin-right: 15px; }
+body.rd-motion-off .rd-dashboard :is(.rd-orb-dial, .rd-orb-item, .rd-orb-item-ring), body.rd-motion-off .rd-widget-frame.is-flyout-open .rd-orb-item { transition: none; }
+@media (prefers-reduced-motion: reduce) { .rd-dashboard :is(.rd-orb-dial, .rd-orb-item, .rd-orb-item-ring), .rd-widget-frame.is-flyout-open .rd-orb-item { transition: none; } }

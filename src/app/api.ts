@@ -7,7 +7,7 @@ import type { WorkspaceInfo, WorkspaceSnapshot } from "../model/types";
 
 export interface WidgetSettings { visible: boolean; keepOnTop: boolean; fadeWhenIdle: boolean; idleOpacity: number; focusProjectId: string | null; magnification: number; bounds: { x: number; y: number; width: number; height: number } | null; collapsed: boolean; orb: { x: number; y: number } | null }
 /** The widget window's shape after a change: where the circle sits inside it and which side the flyout opens on. */
-export interface OrbLayout { shape: "panel" | "orb" | "flyout"; side: "left" | "right"; orbX: number; orbY: number; width: number; height: number }
+export interface OrbLayout { shape: "panel" | "orb" | "flyout"; side: "left" | "right"; vertical: "up" | "down"; orbX: number; orbY: number; width: number; height: number }
 export interface AppSettings {
   schemaVersion: number; workspace: string | null; recentWorkspaces: string[]; pythonPath: string | null;
   motion: "full" | "subtle" | "off"; theme: "system" | "light" | "dark"; plainBackdrop: boolean;

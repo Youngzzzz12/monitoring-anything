@@ -112,11 +112,11 @@ const replies: Record<string, unknown> = {
 mockWindows(label);
 mockIPC((cmd: string, payload?: Record<string, unknown>) => {
   if (cmd === "workspace_snapshot") return snapshot();
-  /* The circle's flyout opens to the right of a circle at the window's corner. */
-  if (cmd === "widget_shape") {
+    if (cmd === "widget_shape") {
     const flyout = payload?.flyout as [number, number] | null;
-    return flyout ? { shape: "flyout", side: "right", orbX: 0, orbY: 0, width: 78 + flyout[0], height: Math.max(72, flyout[1]) }
-      : { shape: payload?.shape === "panel" ? "panel" : "orb", side: "right", orbX: 0, orbY: 0, width: 72, height: 72 };
+    /* The fan rises up and to the right of a circle at the bottom-left of the window. */
+    return flyout ? { shape: "flyout", side: "right", vertical: "up", orbX: 0, orbY: flyout[1], width: flyout[0], height: flyout[1] + 72 }
+      : { shape: payload?.shape === "panel" ? "panel" : "orb", side: "right", vertical: "up", orbX: 0, orbY: 0, width: 72, height: 72 };
   }
   if (cmd in replies) return replies[cmd];
   return null;

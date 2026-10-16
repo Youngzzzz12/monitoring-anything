@@ -85,10 +85,25 @@ class IdleFade {
   }
 }
 
-/* The widget as a circle (Shrink in the top bar): just the completion ring. Hovering opens the breakdown beside it: the
- * window grows on the side with room and the Rust side keeps the circle where it is. A click opens the full widget
- * again; a drag moves the circle anywhere (its place is remembered). */
-const ORB = { size: 72, gap: 6, drag: 4, close: 200 };
+/* The widget as a circle (Shrink in the top bar): just the completion ring. Hovering fans out what makes it up, like a
+ * Dock stack: small rings with their names rise from the circle along a curve, one after another on a spring, and fold
+ * back in reverse when the pointer leaves. The window grows for the fan (up and to the right unless only the other way
+ * has room) and the Rust side keeps the circle where it is. A click opens the full widget again; a drag moves the
+ * circle anywhere (its place is remembered). */
+export const FAN = { orb: 72, ring: 30, first: 64, step: 40, label: 176, gap: 8, pad: 8, drag: 4, close: 260 };
+
+/** Where fan item `index` sits: its ring's centre relative to the circle's centre (before the up/left flip). */
+export function fanOffset(index: number): { dx: number; dy: number } {
+  return { dx: 5 * index + 1.6 * index * index, dy: FAN.first + index * FAN.step };
+}
+
+/** The fan's extent for `count` items: width from the circle's outer edge across, height beyond the circle. */
+export function fanExtent(count: number): [number, number] {
+  if (!count) return [FAN.orb, 0];
+  const half = FAN.orb / 2, last = fanOffset(count - 1);
+  const width = Math.max(...Array.from({ length: count }, (_, i) => half + fanOffset(i).dx + FAN.ring / 2 + FAN.gap + FAN.label + FAN.pad));
+  return [Math.ceil(width), Math.ceil(last.dy + FAN.ring / 2 + FAN.pad - half)];
+}
 
 export class OrbControl {
   private open = false;
@@ -102,8 +117,9 @@ export class OrbControl {
     });
     frame.addEventListener("pointermove", event => {
       const press = this.press;
-      if (press && !press.dragging && Math.hypot(event.screenX - press.x, event.screenY - press.y) > ORB.drag) {
+      if (press && !press.dragging && Math.hypot(event.screenX - press.x, event.screenY - press.y) > FAN.drag) {
         press.dragging = true;
+        this.hide();
         /* The page gets no pointerup after a native window drag; the call returns when the drag ends. */
         void getCurrentWindow().startDragging().catch(() => {}).finally(() => { if (this.press === press) this.press = null; });
       }
@@ -121,15 +137,18 @@ export class OrbControl {
   /** The window-frame signal from Rust (`widget://pointer`). */
   pointer(inside: boolean) { if (inside) void this.show(); else this.hide(); }
 
+  private items() { return Array.from(this.frame.querySelectorAll<HTMLElement>(".rd-orb-item")); }
+
   async show() {
     if (this.open || this.press?.dragging) return;
-    const flyout = this.frame.querySelector<HTMLElement>(".rd-orb-flyout");
-    if (!flyout) return;
+    const count = this.items().length;
+    if (!count) return;
     this.open = true;
     const seq = ++this.seq;
-    const layout = await this.shape("flyout", [flyout.offsetWidth, flyout.offsetHeight]).catch(() => null);
+    const layout = await this.shape("flyout", fanExtent(count)).catch(() => null);
     if (!layout || seq !== this.seq) return;
     this.apply(layout);
+    void this.frame.offsetWidth;
     this.frame.classList.add("is-flyout-open");
   }
 
@@ -141,24 +160,32 @@ export class OrbControl {
     window.setTimeout(() => {
       if (seq !== this.seq) return;
       void this.shape("orb").then(layout => { if (seq === this.seq) this.apply(layout); }).catch(() => {});
-    }, ORB.close);
+    }, FAN.close);
   }
 
   /** A new view was mounted (or the widget left circle mode): closed, circle at the window's corner. */
   reset() {
     this.open = false; this.seq++; this.press = null;
     this.frame.classList.remove("is-flyout-open");
-    this.apply({ shape: "orb", side: "right", orbX: 0, orbY: 0, width: ORB.size, height: ORB.size });
+    this.apply({ shape: "orb", side: "right", vertical: "up", orbX: 0, orbY: 0, width: FAN.orb, height: FAN.orb });
   }
 
+  /** Place the circle inside the window and each fan item on its curve (folded items sit on the circle). */
   private apply(layout: OrbLayout) {
-    const style = this.frame.style, flyout = this.frame.querySelector<HTMLElement>(".rd-orb-flyout");
-    const height = flyout?.offsetHeight ?? 0;
+    const style = this.frame.style, items = this.items(), half = FAN.orb / 2;
+    const cx = layout.orbX + half, cy = layout.orbY + half, h = layout.side === "left" ? -1 : 1, v = layout.vertical === "down" ? 1 : -1;
     style.setProperty("--rd-orb-x", layout.orbX + "px");
     style.setProperty("--rd-orb-y", layout.orbY + "px");
-    style.setProperty("--rd-flyout-x", (layout.side === "left" ? 0 : ORB.size + ORB.gap) + "px");
-    style.setProperty("--rd-flyout-y", Math.max(0, Math.min(layout.orbY, layout.height - height)) + "px");
     this.frame.dataset.side = layout.side;
+    this.frame.dataset.vertical = layout.vertical;
+    items.forEach((item, index) => {
+      const { dx, dy } = fanOffset(index), x = cx + h * dx, y = cy + v * dy;
+      item.style.setProperty("--rd-fx", x.toFixed(1) + "px");
+      item.style.setProperty("--rd-fy", y.toFixed(1) + "px");
+      item.style.setProperty("--rd-from-x", (cx - x).toFixed(1) + "px");
+      item.style.setProperty("--rd-from-y", (cy - y).toFixed(1) + "px");
+      item.style.setProperty("--rd-fan-back", String(items.length - 1 - index));
+    });
   }
 }
 

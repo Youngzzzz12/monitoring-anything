@@ -2290,10 +2290,19 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     miniAlerts(content, alerts);
     if (actionMessage) el(content, "p", actionMessage, "rd-caption rd-mini-message");
   }
-  /* The widget shrunk to a circle: the focused project's completion (family-wide), or the average by top-level project
-   * as on Overall. The flyout beside it lists what makes that up (sub-projects, a paper's top-level chapters, or the
-   * top-level projects); widget.ts sizes the window for it and opens it on hover. Rows open their detail in the
-   * dashboard; clicking or dragging the circle itself is handled by the widget window. */
+  /* The widget shrunk to a circle: just a ring and the percentage (the focused project's completion, family-wide, or the
+   * average by top-level project as on Overall). On hover what makes it up (sub-projects, a paper's top-level chapters,
+   * or the top-level projects) fans out of the circle like a Dock stack, each a small ring with its name, topped by
+   * "Open in dashboard"; widget.ts sizes the window and places the items. Items open their detail in the dashboard;
+   * clicking or dragging the circle itself is handled by the widget window. */
+  function orbRing(parent: Element, share: number | null, size: number, stroke: number) {
+    const radius = (size - stroke) / 2 - 1, circumference = 2 * Math.PI * radius, centre = size / 2;
+    const svg = svgNode(parent, "svg", { viewBox: `0 0 ${size} ${size}`, "aria-hidden": "true", class: "rd-orb-ring" });
+    svgNode(svg, "circle", { class: "rd-orb-track", cx: centre, cy: centre, r: radius, fill: "none", "stroke-width": stroke });
+    if (share === null || share <= 0) return;
+    svgNode(svg, "circle", { class: "rd-orb-arc", cx: centre, cy: centre, r: radius, fill: "none", "stroke-width": stroke, "stroke-linecap": share >= 1 ? "butt" : "round",
+      "stroke-dasharray": (share >= 1 ? circumference : Math.max(0.01, share * circumference)).toFixed(2) + " " + circumference.toFixed(2), transform: `rotate(-90 ${centre} ${centre})` });
+  }
   function renderOrb(projects: Project[]) {
     const focusId = status().focusProjectId, focus = focusId ? projects.find(project => project.id === focusId) || null : null;
     const tops = projects.filter(project => !project.parent);
@@ -2307,32 +2316,30 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     const orb = el(content, "button", null, "rd-orb-dial") as HTMLButtonElement;
     orb.type = "button";
     orb.setAttribute("aria-label", title + ": " + (percent === null ? "no milestones defined" : percent + "% complete") + ". Click to open the widget; drag to move it.");
-    miniRing(orb, share);
+    orbRing(orb, share, 64, 6);
     el(el(orb, "span", null, "rd-orb-center"), "strong", percent === null ? "—" : percent + "%", "rd-orb-value");
-    const flyout = el(content, "div", null, "rd-orb-flyout");
-    const head = el(flyout, "div", null, "rd-orb-head");
-    el(head, "strong", title, "rd-orb-title");
-    el(head, "span", percent === null ? "—" : percent + "%", "rd-orb-percent");
     const bars: Bar[] = focus ? focusBars(focus) : tops.map(project => {
       const counts = familyCount(project);
       return { key: "top:" + project.id, title: project.title, done: counts.completed, total: counts.total, method: "openProject" as const, open: (bridge: ActionBridge) => bridge.openProject!(project.id, mainWindow) };
     });
-    const shown = bars.slice(0, 8);
-    if (shown.length) {
-      const list = el(flyout, "div", null, "rd-orb-list");
-      for (const bar of shown) {
-        const rowShare = bar.total ? bar.done / bar.total : null, rowPercent = rowShare === null ? null : Math.round(rowShare * 100);
-        const row = miniButton(list, "rd-orb-row" + (rowShare !== null && rowShare >= 1 ? " is-complete" : ""), bar.title + ": " + (rowPercent === null ? "no milestones defined" : rowPercent + "%") + ". Open in the dashboard", bar.method, bar.open);
-        el(row, "span", bar.title, "rd-orb-row-name");
-        const track = el(row, "span", null, "rd-orb-row-track");
-        el(track, "span", null, "rd-orb-row-fill").style.width = ((rowShare ?? 0) * 100).toFixed(1) + "%";
-        el(row, "span", rowPercent === null ? "—" : rowPercent + "%", "rd-orb-row-value");
-      }
-    }
-    const own = focus ? familyCount(focus) : null, family = focus?.children?.length || 0;
-    const caption = own ? (own.total ? own.completed + " / " + own.total + " milestones" : "No milestones defined") + (family ? " · " + plural(family, "sub-project") : "")
-      : tops.length ? "Average by project" : "No projects yet";
-    el(flyout, "p", caption + (bars.length > shown.length ? " · " + (bars.length - shown.length) + " more in the widget" : ""), "rd-orb-caption");
+    const shown = bars.slice(0, 6), fan = el(content, "div", null, "rd-orb-fan");
+    fan.setAttribute("role", "list");
+    shown.forEach((bar, index) => {
+      const itemShare = bar.total ? bar.done / bar.total : null, itemPercent = itemShare === null ? null : Math.round(itemShare * 100);
+      const item = miniButton(fan, "rd-orb-item" + (itemShare !== null && itemShare >= 1 ? " is-complete" : ""), bar.title + ": " + (itemPercent === null ? "no milestones defined" : itemPercent + "%") + ". Open in the dashboard", bar.method, bar.open);
+      item.setAttribute("role", "listitem");
+      item.style.setProperty("--rd-fan-index", String(index));
+      orbRing(el(item, "span", null, "rd-orb-item-ring"), itemShare, 30, 4);
+      const label = el(item, "span", null, "rd-orb-label");
+      el(label, "span", bar.title, "rd-orb-label-name");
+      el(label, "span", itemPercent === null ? "—" : itemPercent + "%", "rd-orb-label-value");
+    });
+    const more = bars.length - shown.length;
+    const open = focus
+      ? miniButton(fan, "rd-orb-item rd-orb-open", "Open " + focus.title + " in the dashboard", "openProject", bridge => bridge.openProject!(focus.id, mainWindow))
+      : miniButton(fan, "rd-orb-item rd-orb-open", "Open the dashboard", "openOverall", bridge => bridge.openOverall!(mainWindow));
+    open.style.setProperty("--rd-fan-index", String(shown.length));
+    el(el(open, "span", null, "rd-orb-label"), "span", (focus ? "Open " + focus.title : "Open dashboard") + (more > 0 ? " · " + more + " more" : "") + " ›", "rd-orb-label-name");
   }
   /* First load: a quiet, text-free outline of each mode's layout until the first paint replaces it. */
   function skeleton() {

@@ -6,9 +6,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
-- Widget as a circle: Shrink in the widget's top bar leaves only the completion ring (the focused project, or the
-  average by project). Hovering shows the breakdown beside it (sub-projects, a paper's chapters, or the projects) on
-  the side with room; a click opens the widget again; drag it anywhere (its place is remembered).
+- Widget as a circle: Shrink in the widget's top bar leaves only the completion ring and percentage (the focused
+  project, or the average by project), the rest see-through. Hovering fans out the breakdown like a Dock stack
+  (sub-projects, a paper's chapters, or the projects, each a small ring with its name) away from the screen edge; a
+  click opens the widget again; drag it anywhere (its place is remembered).
 - README examples (LaTeX thesis, training run, a custom monitoring type) with screenshots from `dev/demo.html`.
 
 ### Fixed

@@ -71,12 +71,12 @@ fn ensure_widget(app: &AppHandle) -> tauri::Result<tauri::WebviewWindow> {
 
 /* ---------- The circle widget (orb) ----------
  * The widget window takes one of three shapes: the panel (resizable), the orb (a small square holding the circle) and
- * the orb with its flyout (wide enough for the breakdown beside the circle, on the side with room). Changing shape
- * moves the window so the circle stays where it is on screen. The circle's position is saved when it is dragged. */
+ * the orb with its fan (the breakdown fanning out of the circle, Dock-stack style: up and to the right unless only the
+ * other way has room). Changing shape moves the window so the circle stays where it is on screen. The circle's position
+ * is saved when it is dragged. */
 
 /// The orb window's side (logical pixels): a 64 px circle plus room for its shadow and hover growth.
 pub const ORB: f64 = 72.0;
-const FLYOUT_GAP: f64 = 6.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shape {
@@ -111,8 +111,10 @@ pub struct Rect {
 #[serde(rename_all = "camelCase")]
 pub struct OrbLayout {
     pub shape: String,
-    /// "right" or "left": where the flyout opens.
+    /// "right" or "left": the way the fan curves (and its labels read).
     pub side: String,
+    /// "up" or "down": the way the fan rises.
+    pub vertical: String,
     /// The circle's window's top-left corner inside the window.
     pub orb_x: f64,
     pub orb_y: f64,
@@ -120,15 +122,18 @@ pub struct OrbLayout {
     pub height: f64,
 }
 
-/// The window for the orb at `anchor` with a flyout of `flyout` (width, height) beside it, inside the work `area`: the
-/// flyout opens to the right unless only the left has room; near the bottom the window rises (the circle never moves).
-pub fn flyout_window(anchor: (f64, f64), flyout: (f64, f64), area: Rect) -> (Rect, (f64, f64), bool) {
-    let width = ORB + FLYOUT_GAP + flyout.0;
-    let height = ORB.max(flyout.1);
-    let left = anchor.0 + width > area.x + area.w && anchor.0 + ORB - width >= area.x;
+/// The window for the orb at `anchor` with a fan of `extent` (width from the circle's outer edge across, height beyond
+/// the circle) inside the work `area`: up unless there is more room below, right unless only the left has room. Returns
+/// the window, the circle's offset inside it, and whether the fan goes left and up.
+pub fn fan_window(anchor: (f64, f64), extent: (f64, f64), area: Rect) -> (Rect, (f64, f64), bool, bool) {
+    let (width, height) = (extent.0.max(ORB), extent.1.max(0.0));
+    let (above, below) = (anchor.1 - area.y, area.y + area.h - anchor.1 - ORB);
+    let up = above >= height || above >= below;
+    let (right, left_room) = (area.x + area.w - anchor.0, anchor.0 + ORB - area.x);
+    let left = right < width && left_room > right;
     let x = if left { anchor.0 + ORB - width } else { anchor.0 };
-    let y = if anchor.1 + height > area.y + area.h { (area.y + area.h - height).max(area.y).min(anchor.1) } else { anchor.1 };
-    (Rect { x, y, w: width, h: height }, (anchor.0 - x, anchor.1 - y), left)
+    let y = if up { anchor.1 - height } else { anchor.1 };
+    (Rect { x, y, w: width, h: height + ORB }, (anchor.0 - x, anchor.1 - y), left, up)
 }
 
 /// The panel opened from the orb: its saved size, its top-right corner at the circle's, kept inside the work area.
@@ -192,20 +197,22 @@ pub fn set_widget_shape(app: &AppHandle, shape: &str, flyout: Option<(f64, f64)>
             let _ = window.set_resizable(true);
             place(&window, rect)?;
             let _ = window.set_min_size(Some(LogicalSize::new(WIDGET_MIN.0, WIDGET_MIN.1)));
-            OrbLayout { shape: "panel".into(), side: "right".into(), orb_x: 0.0, orb_y: 0.0, width: rect.w, height: rect.h }
+            OrbLayout { shape: "panel".into(), side: "right".into(), vertical: "up".into(), orb_x: 0.0, orb_y: 0.0, width: rect.w, height: rect.h }
         }
         "orb" | "flyout" => {
-            let (rect, offset, left) = match (shape, flyout) {
+            let (rect, offset, left, up) = match (shape, flyout) {
                 ("flyout", Some(size)) if size.0.is_finite() && size.1.is_finite() => {
-                    flyout_window(anchor, (size.0.clamp(120.0, 480.0), size.1.clamp(40.0, 640.0)), area)
+                    fan_window(anchor, (size.0.clamp(ORB, 520.0), size.1.clamp(0.0, 640.0)), area)
                 }
-                _ => (Rect { x: anchor.0, y: anchor.1, w: ORB, h: ORB }, (0.0, 0.0), false),
+                _ => (Rect { x: anchor.0, y: anchor.1, w: ORB, h: ORB }, (0.0, 0.0), false, true),
             };
             let _ = window.set_min_size(None::<LogicalSize<f64>>);
             let _ = window.set_resizable(false);
-            set_geometry(if rect.w > ORB { Shape::Flyout } else { Shape::Orb }, offset);
+            let fanned = rect.w > ORB || rect.h > ORB;
+            set_geometry(if fanned { Shape::Flyout } else { Shape::Orb }, offset);
             place(&window, rect)?;
-            OrbLayout { shape: if rect.w > ORB { "flyout" } else { "orb" }.into(), side: if left { "left" } else { "right" }.into(), orb_x: offset.0, orb_y: offset.1, width: rect.w, height: rect.h }
+            OrbLayout { shape: if fanned { "flyout" } else { "orb" }.into(), side: if left { "left" } else { "right" }.into(), vertical: if up { "up" } else { "down" }.into(),
+                        orb_x: offset.0, orb_y: offset.1, width: rect.w, height: rect.h }
         }
         _ => return Err("Unknown widget shape".into()),
     };
@@ -362,19 +369,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_flyout_opens_where_there_is_room_and_the_circle_stays_put() {
+    fn the_fan_opens_where_there_is_room_and_the_circle_stays_put() {
         let area = Rect { x: 0.0, y: 0.0, w: 1920.0, h: 1040.0 };
-        let (rect, offset, left) = flyout_window((100.0, 200.0), (240.0, 180.0), area);
-        assert!(!left);
-        assert_eq!((rect.x, rect.y, rect.w, rect.h), (100.0, 200.0, ORB + FLYOUT_GAP + 240.0, 180.0));
-        assert_eq!(offset, (0.0, 0.0));
-        let (rect, offset, left) = flyout_window((1850.0, 200.0), (240.0, 40.0), area);
-        assert!(left);
-        assert_eq!(rect.x + offset.0, 1850.0);
-        assert_eq!(rect.h, ORB);
-        let (rect, offset, _) = flyout_window((100.0, 1000.0), (240.0, 300.0), area);
-        assert_eq!(rect.y + rect.h, 1040.0);
-        assert_eq!(rect.y + offset.1, 1000.0);
+        /* Up and to the right by default: the window rises above the circle. */
+        let (rect, offset, left, up) = fan_window((100.0, 600.0), (280.0, 250.0), area);
+        assert!(!left && up);
+        assert_eq!((rect.x, rect.y, rect.w, rect.h), (100.0, 350.0, 280.0, 250.0 + ORB));
+        assert_eq!((rect.x + offset.0, rect.y + offset.1), (100.0, 600.0));
+        /* Near the top: down. Near the right edge: to the left. The circle never moves. */
+        let (rect, offset, left, up) = fan_window((1850.0, 40.0), (280.0, 250.0), area);
+        assert!(left && !up);
+        assert_eq!((rect.x + offset.0, rect.y + offset.1), (1850.0, 40.0));
+        assert_eq!(rect.x + rect.w, 1850.0 + ORB);
         let panel = panel_window((1850.0, 1000.0), (320.0, 540.0), area);
         assert_eq!((panel.x, panel.y), (1920.0 - 320.0, 1040.0 - 540.0));
         assert_eq!(panel_window((900.0, 100.0), (320.0, 540.0), area).x, 900.0 + ORB - 320.0);

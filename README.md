@@ -64,13 +64,13 @@ with read-only rules (globs, regexes, CSV and JSON values, log status):
 ### On screen while you work
 
 The floating widget shows projects, Next up and progress; focus one project to see its sub-projects or chapters, and
-complete or add milestones there. Shrink it to a **circle** with just the completion ring: hovering shows the
-breakdown beside it, a click opens the widget again, and you can drag the circle anywhere.
+complete or add milestones there. Shrink it to a **circle**, just the completion ring: hovering fans out the
+breakdown like a Dock stack, a click opens the widget again, and you can drag the circle anywhere.
 
 <p>
   <img src="docs/screenshots/widget.png" alt="Floating widget" width="30%">
   <img src="docs/screenshots/widget-focus.png" alt="Widget focused on one project" width="30%">
-  <img src="docs/screenshots/orb.png" alt="The widget as a circle, with its breakdown on hover" width="36%">
+  <img src="docs/screenshots/orb.png" alt="The widget as a circle, its breakdown fanned out on hover" width="30%">
 </p>
 
 ## Install

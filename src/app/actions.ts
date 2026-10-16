@@ -49,6 +49,7 @@ export class AppActions implements ActionBridge {
       running: this.store.watch.running, busy: this.store.busy, error: this.store.error || this.store.watch.error,
       canEdit: true, canAddMilestone: true, canRemove: true, canCreate: true, canGroup: true,
       keepOnTop: Boolean(this.store.settings?.widget.keepOnTop), canKeepOnTop: false, discoveryScanning: this.discovery.scanning, recentMilestones: this.store.recentMilestones(),
+      widgetVisible: Boolean(this.store.settings?.widget.visible),
     };
   }
 

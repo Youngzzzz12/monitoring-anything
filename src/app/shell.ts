@@ -196,7 +196,7 @@ export class Shell {
         item.addEventListener("click", () => void api.workspaceOpen(path).catch(error => notice(errorMessage(error), 8000, "error")));
       }
     }
-    h(card, "p", { cls: "rd-caption", text: "Already using the Obsidian Research Dashboard? Create a workspace, then choose Import from Obsidian in the dashboard's More menu or in Settings." });
+    h(card, "p", { cls: "rd-caption", text: "Already using the Obsidian Research Dashboard? Create a workspace, then choose Import from Obsidian in Settings → Workspace." });
   }
 
   async createWorkspace(): Promise<void> {

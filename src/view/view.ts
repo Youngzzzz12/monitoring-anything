@@ -31,6 +31,8 @@ export interface BridgeStatus {
   running: boolean; busy: boolean; error?: string | null;
   canEdit?: boolean; canAddMilestone?: boolean; canRemove?: boolean; canCreate?: boolean; canGroup?: boolean;
   keepOnTop?: boolean; canKeepOnTop?: boolean; discoveryScanning?: boolean;
+  /** Whether the floating widget is shown (the main window's widget button is pressed). */
+  widgetVisible?: boolean;
   /** The widget's focused project (null: all projects). */
   focusProjectId?: string | null;
   /** Milestones just added in this window (task text), newest first: Next up puts them on top. */
@@ -187,6 +189,9 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     plus: "M12 5v14 M5 12h14",
     connect: "M3 7h7l2 2h9v11H3z M3 7V4h7l2 3 M12 12v5 M9.5 14.5h5",
     custom: "M4 7h9 M17 7h3 M4 17h3 M11 17h9 M15 5v4 M9 15v4",
+    refresh: "M20 12a8 8 0 1 1-2.34-5.66 M20 4v5h-5",
+    widget: "M3 5h18v14H3z M13 11h5v5h-5z",
+    settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   };
   function icon(parent: Element, kind = "project", className: string | null = null) {
     const svg = documentRef.createElementNS(svgNamespace, "svg");
@@ -537,19 +542,24 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
       });
       return button;
     };
+    /* Icon buttons with a tooltip (the workspace folder and the Obsidian import live in Settings → Workspace). */
+    const iconAction = (label: string, detail: string, method: keyof ActionBridge, kind: string, disabled: boolean, pressed?: boolean) => {
+      const button = add("", method, disabled);
+      button.classList.add("rd-icon-control");
+      button.setAttribute("aria-label", label);
+      if (pressed !== undefined) button.setAttribute("aria-pressed", String(pressed));
+      icon(button, kind, "rd-control-glyph");
+      hint(button, label, detail);
+      return button;
+    };
     add("Connect project", "connect", state.busy, true);
     createButton(actions, "New project");
-    const menu = disclosure(actions, "actions-menu", "More", "rd-settings-menu");
-    const menuItems = el(menu, "div", null, "rd-menu-items");
     add(state.running ? "Stop live updates" : "Start live updates", state.running ? "stop" : "start", state.busy);
-    menuItems.appendChild(add("Collect now", "collect", state.busy || state.running));
-    if (bridge.toggleWidget) menuItems.appendChild(add("Floating widget", "toggleWidget", false));
-    if (bridge.importVault) menuItems.appendChild(add("Import from Obsidian…", "importVault", state.busy));
-    if (bridge.revealWorkspace) menuItems.appendChild(add("Workspace folder", "revealWorkspace", false));
-    if (bridge.openSettings) menuItems.appendChild(add("Settings", "openSettings", false));
+    iconAction("Collect now", state.running ? "Live updates already collect as files change" : "Read every connected folder once", "collect", "refresh", state.busy || state.running);
+    if (bridge.toggleWidget) iconAction(state.widgetVisible ? "Hide floating widget" : "Show floating widget", "Progress at a glance, beside your work", "toggleWidget", "widget", false, Boolean(state.widgetVisible));
+    if (bridge.openSettings) iconAction("Settings", "Ctrl+,", "openSettings", "settings", false);
     el(parent, "span", state.running ? "Live updates · Running" : "Live updates · Stopped", "rd-live-state" + (state.running ? " is-running" : ""));
     if (state.error) el(parent, "p", `Last action: ${state.error}`, "rd-caption");
-    actions.appendChild(menu);
     if (actionMessage) el(parent, "p", actionMessage, "rd-caption");
   }
   function sourceHealth(source: Source) { return source.health; }

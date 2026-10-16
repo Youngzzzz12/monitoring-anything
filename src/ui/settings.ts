@@ -1,4 +1,5 @@
-/* Settings (workspace, collector Python, appearance, widget, system) and the one-time Obsidian import dialog. */
+/* Settings in categories (general, workspace, widget, agent, monitoring types, advanced) and the one-time Obsidian
+ * import dialog. */
 
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from "@tauri-apps/plugin-autostart";
@@ -17,7 +18,7 @@ export interface SettingsHooks {
   importVault(): Promise<unknown>;
   agentProviders(refresh?: boolean): Promise<ProviderPreset[]>;
   agentSetup(): AgentSetupDeps;
-  /** Scroll to a section on open ("agent"). */
+  /** Open on a category ("agent", "workspace", ...); otherwise the last one viewed. */
   section?: string;
 }
 
@@ -28,26 +29,101 @@ async function patch(values: Record<string, unknown>): Promise<void> {
   catch (error) { notice(errorMessage(error), 8000, "error"); }
 }
 
+/* Settings in categories: a list on the left, one category at a time on the right (the last one viewed opens again). */
+const SECTIONS = [
+  ["general", "General"], ["workspace", "Workspace"], ["widget", "Widget"], ["agent", "Agent"], ["types", "Monitoring types"], ["advanced", "Advanced"],
+] as const;
+type SectionId = typeof SECTIONS[number][0];
+let lastSection: SectionId = "general";
+
 export function settingsDialog(hooks: SettingsHooks): void {
   const modal = new Modal("Settings", "rd-settings-modal");
   const settings = hooks.settings();
-  const body = modal.contentEl;
+  const layout = h(modal.contentEl, "div", { cls: "rd-settings-layout" });
+  const nav = h(layout, "nav", { cls: "rd-settings-nav", attr: { "aria-label": "Settings categories", role: "tablist", "aria-orientation": "vertical" } });
+  const panes = h(layout, "div", { cls: "rd-settings-panes" });
+  const tabs = new Map<SectionId, HTMLButtonElement>(), sections = new Map<SectionId, HTMLElement>();
+  const show = (id: SectionId, focus = false) => {
+    lastSection = id;
+    for (const [key, tab] of tabs) { tab.classList.toggle("is-active", key === id); tab.setAttribute("aria-selected", String(key === id)); tab.tabIndex = key === id ? 0 : -1; }
+    for (const [key, section] of sections) section.hidden = key !== id;
+    panes.scrollTop = 0;
+    if (focus) tabs.get(id)?.focus();
+  };
+  for (const [id, title] of SECTIONS) {
+    const tab = h(nav, "button", { cls: "rd-settings-tab", text: title, attr: { type: "button", role: "tab", id: "rd-settings-tab-" + id, "aria-controls": "rd-settings-" + id } });
+    tab.addEventListener("click", () => show(id));
+    tab.addEventListener("keydown", event => {
+      const index = SECTIONS.findIndex(item => item[0] === id), step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+      if (!step) return;
+      event.preventDefault();
+      show(SECTIONS[(index + step + SECTIONS.length) % SECTIONS.length][0], true);
+    });
+    tabs.set(id, tab);
+    const section = h(panes, "section", { cls: "rd-settings-section", attr: { id: "rd-settings-" + id, role: "tabpanel", "aria-labelledby": "rd-settings-tab-" + id } });
+    h(section, "h3", { cls: "rd-settings-pane-title", text: title });
+    sections.set(id, section);
+  }
+  const pane = (id: SectionId) => sections.get(id)!;
 
-  heading(body, "Workspace");
+  /* General: how the app looks and starts. */
+  const general = pane("general");
+  heading(general, "Appearance");
+  dropdown(setting(general, "Theme"), [["system", "Follow system"], ["light", "Light"], ["dark", "Dark"]], settings.theme, value => void patch({ theme: value }));
+  dropdown(setting(general, "Motion", "Subtle shortens movement and drops the update glow; Off removes animation. The system Reduce motion setting always wins."), [["full", "Full"], ["subtle", "Subtle"], ["off", "Off"]], settings.motion, value => void patch({ motion: value }));
+  toggle(setting(general, "Plain background", "Turn off the tinted backdrop behind the page."), settings.plainBackdrop, value => void patch({ plainBackdrop: value }));
+  heading(general, "Startup");
+  const autostartRow = setting(general, "Start at login", "Launch Monitoring Anything in the tray when you sign in.");
+  const autostartToggle = toggle(autostartRow, false, async value => {
+    try { if (value) await enableAutostart(); else await disableAutostart(); }
+    catch (error) { notice(errorMessage(error), 6000, "error"); autostartToggle.checked = !value; }
+  });
+  void autostartEnabled().then(enabled => { autostartToggle.checked = enabled; }).catch(() => { autostartToggle.disabled = true; });
+  toggle(setting(general, "Keep running in the tray", "Closing the main window hides it; live updates and the widget keep running. Quit from the tray icon."), settings.closeToTray, value => void patch({ closeToTray: value }));
+  toggle(setting(general, "Start live updates at launch", "Begin monitoring connected sources when the app starts."), settings.startLiveOnLaunch, value => void patch({ startLiveOnLaunch: value }));
+
+  /* Workspace: the folder everything is stored in, importing, discovery. */
+  const workspace = pane("workspace");
   const root = hooks.workspaceRoot();
-  const workspaceRow = setting(body, "Folder", root || "No workspace is open.");
+  const workspaceRow = setting(workspace, "Folder", root || "No workspace is open.");
   if (root) button(workspaceRow.control, "Show folder", () => void api.revealPath(root).catch(error => notice(errorMessage(error), 6000, "error")));
   button(workspaceRow.control, "Open other…", () => { modal.close(); void hooks.openWorkspace(); });
   button(workspaceRow.control, "New…", () => { modal.close(); void hooks.createWorkspace(); });
-  const importRow = setting(body, "Import from Obsidian", "One-time copy of an Obsidian vault's Research Dashboard projects, sources and data. The vault is only read.");
+  const importRow = setting(workspace, "Import from Obsidian", "One-time copy of an Obsidian vault's Research Dashboard projects, sources and data. The vault is only read.");
   button(importRow.control, "Import…", () => { modal.close(); void hooks.importVault(); });
+  toggle(setting(workspace, "Scan for new sub-projects", "Check each project's discovery folder (set in Edit project) for new subfolders when the app opens and every ten minutes while live updates run."),
+    settings.discoveryScan !== false, value => void patch({ discoveryScan: value }));
 
-  heading(body, "Collector");
+  /* Widget. */
+  const widget = pane("widget");
+  toggle(setting(widget, "Show widget", "A small always-available window with overall progress, projects, today's writing, next milestones and alerts. Its top bar can shrink it to a circle."), settings.widget.visible, value => void api.widgetSetVisible(value).catch(error => notice(errorMessage(error), 6000, "error")));
+  toggle(setting(widget, "Keep on top", "The widget stays above other windows. Its pin button changes the same setting."), settings.widget.keepOnTop, value => void patch({ widget: { keepOnTop: value } }));
+  toggle(setting(widget, "Fade when idle", "While kept on top, the widget turns translucent about a second after the pointer leaves it."), settings.widget.fadeWhenIdle, value => void patch({ widget: { fadeWhenIdle: value } }));
+  const opacityRow = setting(widget, "Idle opacity", "How opaque the widget stays while idle (30–90%).");
+  const slider = h(opacityRow.control, "input", { attr: { type: "range", min: "30", max: "90", step: "5" } });
+  slider.value = String(Math.round(settings.widget.idleOpacity * 100));
+  const sliderValue = h(opacityRow.control, "span", { cls: "rd-slider-value", text: slider.value + "%" });
+  slider.addEventListener("input", () => { sliderValue.textContent = slider.value + "%"; });
+  slider.addEventListener("change", () => void patch({ widget: { idleOpacity: Number(slider.value) / 100 } }));
+  const magnifyRow = setting(widget, "Hover magnification", "The module under the pointer grows with its card, its neighbours a little, like the macOS Dock (0% turns it off; at most 8%, so cards stay inside the widget). Motion Subtle or Off, and the system Reduce motion setting, keep it still.");
+  const magnify = h(magnifyRow.control, "input", { attr: { type: "range", min: "0", max: "8", step: "1" } });
+  magnify.value = String(Math.round((settings.widget.magnification ?? 0.05) * 100));
+  const magnifyValue = h(magnifyRow.control, "span", { cls: "rd-slider-value", text: magnify.value === "0" ? "Off" : magnify.value + "%" });
+  magnify.addEventListener("input", () => { magnifyValue.textContent = magnify.value === "0" ? "Off" : magnify.value + "%"; });
+  magnify.addEventListener("change", () => void patch({ widget: { magnification: Number(magnify.value) / 100 } }));
+
+  /* Agent and monitoring types. */
+  agentSettings(pane("agent"), hooks);
+  monitoringTypes(pane("types"));
+
+  /* Advanced: the collector's Python, and where things are. */
+  const advanced = pane("advanced");
+  heading(advanced, "Collector");
   /* The bundled runtime is the default; a path here overrides it (for example a Python with extra tools installed). */
-  const pythonRow = setting(body, "Python", "The collector runs on the Python bundled with the app. Enter another interpreter (3.10 or newer) only if you need one; clear the field to go back.");
+  const pythonRow = setting(advanced, "Python", "The collector runs on the Python bundled with the app. Enter another interpreter (3.10 or newer) only if you need one, for example one with numpy or h5py for custom adapters; clear the field to go back.");
   const pythonInput = textInput(pythonRow, settings.pythonPath || "", { placeholder: "Bundled" });
   pythonInput.classList.add("rd-connect-path");
-  const pythonStatus = h(body, "p", { cls: "rd-caption rd-settings-status" });
+  const pythonStatus = h(advanced, "p", { cls: "rd-caption rd-settings-status" });
   const showPython = () => void api.pythonStatus().then(status => {
     const where = status.source === "bundled" ? "Bundled" : status.source === "custom" ? "Custom" : "System";
     pythonStatus.textContent = status.ok ? `${where} Python ${status.version} · ${status.path}` : `${where} Python is not usable: ${status.error || "unknown error"}`;
@@ -68,51 +144,13 @@ export function settingsDialog(hooks: SettingsHooks): void {
     else pythonStatus.textContent = found.length ? "Only unsupported interpreters were found: " + found.map(item => `${item.path} (${item.version || item.error})`).join(", ") : "No Python 3.10+ found on PATH.";
   });
   showPython();
-  toggle(setting(body, "Start live updates at launch", "Begin monitoring connected sources when the app starts."), settings.startLiveOnLaunch, value => void patch({ startLiveOnLaunch: value }));
-  toggle(setting(body, "Scan for new sub-projects", "Check each project's discovery folder (set in Edit project) for new subfolders when the app opens and every ten minutes while live updates run."),
-    settings.discoveryScan !== false, value => void patch({ discoveryScan: value }));
-
-  const agentSection = h(body, "section", { cls: "rd-settings-section", attr: { id: "rd-settings-agent" } });
-  agentSettings(agentSection, hooks);
-  const typesSection = h(body, "section", { cls: "rd-settings-section" });
-  monitoringTypes(typesSection);
-
-  heading(body, "Appearance");
-  dropdown(setting(body, "Theme"), [["system", "Follow system"], ["light", "Light"], ["dark", "Dark"]], settings.theme, value => void patch({ theme: value }));
-  dropdown(setting(body, "Motion", "Subtle shortens movement and drops the update glow; Off removes animation. The system Reduce motion setting always wins."), [["full", "Full"], ["subtle", "Subtle"], ["off", "Off"]], settings.motion, value => void patch({ motion: value }));
-  toggle(setting(body, "Plain background", "Turn off the tinted backdrop behind the page."), settings.plainBackdrop, value => void patch({ plainBackdrop: value }));
-
-  heading(body, "Floating widget");
-  toggle(setting(body, "Show widget", "A small always-available window with overall progress, projects, today's writing, next milestones and alerts."), settings.widget.visible, value => void api.widgetSetVisible(value).catch(error => notice(errorMessage(error), 6000, "error")));
-  toggle(setting(body, "Keep on top", "The widget stays above other windows. Its pin button changes the same setting."), settings.widget.keepOnTop, value => void patch({ widget: { keepOnTop: value } }));
-  toggle(setting(body, "Fade when idle", "While kept on top, the widget turns translucent about a second after the pointer leaves it."), settings.widget.fadeWhenIdle, value => void patch({ widget: { fadeWhenIdle: value } }));
-  const opacityRow = setting(body, "Idle opacity", "How opaque the widget stays while idle (30–90%).");
-  const slider = h(opacityRow.control, "input", { attr: { type: "range", min: "30", max: "90", step: "5" } });
-  slider.value = String(Math.round(settings.widget.idleOpacity * 100));
-  const sliderValue = h(opacityRow.control, "span", { cls: "rd-slider-value", text: slider.value + "%" });
-  slider.addEventListener("input", () => { sliderValue.textContent = slider.value + "%"; });
-  slider.addEventListener("change", () => void patch({ widget: { idleOpacity: Number(slider.value) / 100 } }));
-  const magnifyRow = setting(body, "Hover magnification", "The module under the pointer grows with its card, its neighbours a little, like the macOS Dock (0% turns it off; at most 8%, so cards stay inside the widget). Motion Subtle or Off, and the system Reduce motion setting, keep it still.");
-  const magnify = h(magnifyRow.control, "input", { attr: { type: "range", min: "0", max: "8", step: "1" } });
-  magnify.value = String(Math.round((settings.widget.magnification ?? 0.05) * 100));
-  const magnifyValue = h(magnifyRow.control, "span", { cls: "rd-slider-value", text: magnify.value === "0" ? "Off" : magnify.value + "%" });
-  magnify.addEventListener("input", () => { magnifyValue.textContent = magnify.value === "0" ? "Off" : magnify.value + "%"; });
-  magnify.addEventListener("change", () => void patch({ widget: { magnification: Number(magnify.value) / 100 } }));
-
-  heading(body, "System");
-  const autostartRow = setting(body, "Start at login", "Launch Monitoring Anything in the tray when you sign in.");
-  const autostartToggle = toggle(autostartRow, false, async value => {
-    try { if (value) await enableAutostart(); else await disableAutostart(); }
-    catch (error) { notice(errorMessage(error), 6000, "error"); autostartToggle.checked = !value; }
-  });
-  void autostartEnabled().then(enabled => { autostartToggle.checked = enabled; }).catch(() => { autostartToggle.disabled = true; });
-  toggle(setting(body, "Keep running in the tray", "Closing the main window hides it; live updates and the widget keep running. Quit from the tray icon."), settings.closeToTray, value => void patch({ closeToTray: value }));
-
-  const about = h(body, "p", { cls: "rd-caption rd-settings-about" });
+  heading(advanced, "About");
+  const about = h(advanced, "p", { cls: "rd-caption rd-settings-about" });
   void api.appInfo().then(info => { about.textContent = `Monitoring Anything ${info.version} · ${info.platform} · collector: ${info.collectorDir || "not found"} · settings: ${info.settingsPath}`; });
-  const row = buttons(body);
+
+  const row = buttons(modal.contentEl);
   button(row, "Done", () => modal.close(), true);
-  if (hooks.section === "agent") requestAnimationFrame(() => agentSection.scrollIntoView({ block: "start" }));
+  show(SECTIONS.some(item => item[0] === hooks.section) ? hooks.section as SectionId : lastSection);
 }
 
 function flashSaved(row: Row): void {
@@ -126,7 +164,6 @@ function flashSaved(row: Row): void {
 function agentSettings(section: HTMLElement, hooks: SettingsHooks): void {
   /* Found agents, model, API key and the connection test come from the shared setup panel; the full preset list,
    * command and arguments, never-send patterns and the time limit stay under Advanced. */
-  heading(section, "Agent");
   h(section, "p", { cls: "rd-caption rd-settings-note", text: "Used when you choose Smart monitoring or Add requirements on a plan card. The agent reads the folder's file names and short text excerpts and returns a monitoring plan; it never writes files or runs your software." });
   renderAgentSetup(section, hooks.agentSetup(), { onChange: () => { state = normalizeAgentSettings(hooks.settings().agent); } });
   const advanced = h(section, "details", { cls: "rd-settings-advanced" });
@@ -198,7 +235,6 @@ function agentSettings(section: HTMLElement, hooks: SettingsHooks): void {
 
 /** Monitoring types: saved types can be deleted (archived recoverably by the collector); built-ins are listed by name. */
 function monitoringTypes(container: HTMLElement): void {
-  heading(container, "Monitoring types");
   const status = h(container, "p", { cls: "rd-caption", text: "Loading monitoring types…" });
   void api.collector<{ profiles?: ProfileSummary[] }>("profiles", ["list"]).then(result => {
     status.remove();

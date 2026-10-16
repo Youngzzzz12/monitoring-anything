@@ -180,6 +180,26 @@ describe("widget milestones", () => {
   });
 });
 
+describe("overall header", () => {
+  it("offers Collect now, the floating widget and Settings as icon buttons instead of a More menu", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const bridge: ActionBridge = { getStatus: () => ({ running: false, busy: false, widgetVisible: true }), connect: vi.fn(), collect: vi.fn(), start: vi.fn(), stop: vi.fn(),
+      toggleWidget: vi.fn().mockResolvedValue(undefined), openSettings: vi.fn().mockResolvedValue(undefined), importVault: vi.fn(), revealWorkspace: vi.fn() };
+    const handle = mountView(container, { mode: "overview" }, { load: async () => buildModel(snapshot()), bridge, navigate: vi.fn(), openExternal: vi.fn(), openWorkspaceFile: vi.fn(), subscribe: () => () => {} });
+    await handle.painted;
+    const controls = container.querySelector(".rd-controls")!;
+    expect(controls.querySelector("details, .rd-settings-menu")).toBeNull();
+    const icons = Array.from(controls.querySelectorAll<HTMLButtonElement>(".rd-icon-control"));
+    expect(icons.map(button => button.getAttribute("aria-label"))).toEqual(["Collect now", "Hide floating widget", "Settings"]);
+    expect(icons[1].getAttribute("aria-pressed")).toBe("true");
+    expect(controls.textContent).not.toMatch(/Workspace folder|Import from Obsidian/);
+    icons[2].click();
+    await until(() => (bridge.openSettings as ReturnType<typeof vi.fn>).mock.calls.length);
+    handle.dispose();
+  });
+});
+
 describe("widget as a circle", () => {
   const mountOrb = async (focusProjectId: string | null) => {
     const container = document.createElement("div");

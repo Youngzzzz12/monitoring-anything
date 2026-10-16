@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 - License: GNU General Public License v3.0 (GPL-3.0-only). Versions 0.1.0 and 0.1.1 were released under MIT.
+- Overall header: Collect now, the floating widget (pressed while shown) and Settings are icon buttons; the More menu
+  is gone. The workspace folder and Import from Obsidian are in Settings → Workspace.
+- Settings in categories (General, Workspace, Widget, Agent, Monitoring types, Advanced), one at a time.
 
 ### Added
 - Custom adapters: when built-in types and declarative rules cannot read a folder, an agent (in a chat through

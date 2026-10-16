@@ -5,7 +5,7 @@ machine-learning training runs, and anything else that leaves files behind. Conn
 progress by itself, next to your projects and milestones. A floating widget, or a small circle, keeps the overview on
 screen, and your agent (Claude Code, Codex) can do all of it for you from a chat.
 
-> Status: **0.2.1, early release** for Windows (macOS builds will follow). Builds are not yet code-signed.
+> Status: **0.2.2, early release** for Windows and macOS (Apple Silicon). Builds are not yet code-signed.
 
 ![Overview](docs/screenshots/overall.png)
 
@@ -135,7 +135,10 @@ Agents work through the `ma` command line the app keeps next to its settings
 
 ## Get started
 
-1. Download the installer from [Releases](../../releases) and run it. Python is bundled; nothing else is needed.
+1. Download from [Releases](../../releases): the `.exe` installer for Windows, or the `.dmg` for macOS (Apple Silicon;
+   drag the app to Applications). Python is bundled; nothing else is needed. The builds are not code-signed yet:
+   on Windows choose **More info → Run anyway**; on macOS, if it will not open, go to **System Settings → Privacy &
+   Security → Open Anyway** (or run `xattr -dr com.apple.quarantine "/Applications/Monitoring Anything.app"`).
 2. On first start, **create a workspace** (any empty folder): an ordinary folder of JSON and Markdown files where the
    app keeps projects, milestones and collected data. The guide also finds an agent for Smart monitoring and installs
    the skill.

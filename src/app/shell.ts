@@ -11,6 +11,7 @@ import { mountView, type Mode, type ViewContext, type ViewHandle } from "../view
 import { h } from "../ui/modal";
 import { notice } from "../ui/notice";
 import { importDialog, settingsDialog } from "../ui/settings";
+import { startUpdateChecks } from "./updates";
 import { AppActions, type PageState } from "./actions";
 import { api, events, type AgentRequest } from "./api";
 import type { Store } from "./store";
@@ -152,7 +153,7 @@ export class Shell {
     void this.actions.connect({ source: paths[0], parentId: this.state.projectId || null, dropped: true }).catch(error => notice(errorMessage(error), 8000, "error"));
   }
 
-  start(): void { this.render(true); this.actions.discovery.request(); this.maybeAgentSetup(); }
+  start(): void { this.render(true); this.actions.discovery.request(); this.maybeAgentSetup(); startUpdateChecks(() => this.store.settings?.checkUpdates !== false); }
 
   /** First run (once a workspace is open): offer to connect an agent; Skip or Done marks it done. */
   private maybeAgentSetup(): void {

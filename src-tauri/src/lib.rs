@@ -488,6 +488,8 @@ pub fn run() {
     // Before anything starts a thread: agents and the collector inherit a PATH like a terminal's (see envpath.rs).
     envpath::widen();
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| match request_from_args(&args) {
             Some(request) => deliver_request(app, request),
             None => windows::show_main(app),

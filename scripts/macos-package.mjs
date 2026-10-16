@@ -48,6 +48,20 @@ for (const file of nested) run("codesign", ["--force", "--sign", "-", "--timesta
 run("codesign", ["--force", "--sign", "-", "--timestamp=none", app]);
 run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", app]);
 
+/* The update bundle (.app.tar.gz) was made before the signatures above: rebuild it from the signed app and sign it
+ * again with the updater key, or installed apps would update to the unsigned copy. */
+const archive = readdirSync(macos).find(name => name.endsWith(".app.tar.gz"));
+if (archive) {
+  const target = join(macos, archive), appName = app.split("/").pop();
+  rmSync(target, { force: true });
+  rmSync(target + ".sig", { force: true });
+  run("tar", ["-czf", target, "-C", macos, appName], { env: { ...process.env, COPYFILE_DISABLE: "1" } });
+  if (process.env.TAURI_SIGNING_PRIVATE_KEY) {
+    run("npx", ["tauri", "signer", "sign", target], { cwd: root });
+    console.log(`Update bundle rebuilt and signed: ${archive}`);
+  } else console.warn("TAURI_SIGNING_PRIVATE_KEY is not set: the update bundle is not signed (installed apps will not take it).");
+}
+
 const python = join(resources, "python", "bin", "python3");
 if (existsSync(python)) {
   /* What the app runs: the bundled Python with the bundled collector. */

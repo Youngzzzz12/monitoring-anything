@@ -15,6 +15,8 @@ export interface AppSettings {
   /** Provider choice, overrides, never-send patterns and time limit (keys live in the OS credential store). */
   agent: Record<string, unknown>;
   discoveryScan: boolean;
+  /** Look for a new version on GitHub a little after start (at most once a day). */
+  checkUpdates: boolean;
 }
 /** A request from the `ma` command line (an agent): open the plan card for a folder, optionally with its plan. */
 export interface AgentRequest { action: "connect"; source: string; plan?: Record<string, unknown> | null; profileId?: string | null; title?: string | null; parentId?: string | null }

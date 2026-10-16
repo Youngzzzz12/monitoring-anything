@@ -1,6 +1,6 @@
 [package]
 name = "monitoring-anything"
-version = "0.2.3"
+version = "0.3.0"
 description = "Monitoring Anything: projects, milestones and live progress monitoring"
 authors = ["Yang"]
 license = "GPL-3.0-only"
@@ -22,6 +22,8 @@ tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "=2.13.1"
+tauri-plugin-process = "=2.4.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 notify = "8"

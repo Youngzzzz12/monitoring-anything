@@ -97,6 +97,8 @@ pub struct AppSettings {
     pub agent: Value,
     /// Scan discovery folders for new sub-project folders in the background.
     pub discovery_scan: bool,
+    /// Look for a new version on GitHub a little after start (at most once a day).
+    pub check_updates: bool,
 }
 
 impl Default for AppSettings {
@@ -114,6 +116,7 @@ impl Default for AppSettings {
             widget: WidgetSettings::default(),
             agent: Value::Object(Default::default()),
             discovery_scan: true,
+            check_updates: true,
         }
     }
 }

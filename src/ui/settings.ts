@@ -9,6 +9,7 @@ import { renderAgentSetup, type AgentSetupDeps } from "./agent-setup";
 import { errorMessage } from "../model/rules";
 import { button, buttons, dropdown, h, heading, Modal, setBusy, setting, textInput, toggle, type Row } from "./modal";
 import { notice } from "./notice";
+import { checkForUpdate } from "../app/updates";
 
 export interface SettingsHooks {
   settings(): AppSettings;
@@ -81,6 +82,12 @@ export function settingsDialog(hooks: SettingsHooks): void {
   void autostartEnabled().then(enabled => { autostartToggle.checked = enabled; }).catch(() => { autostartToggle.disabled = true; });
   toggle(setting(general, "Keep running in the tray", "Closing the main window hides it; live updates and the widget keep running. Quit from the tray icon."), settings.closeToTray, value => void patch({ closeToTray: value }));
   toggle(setting(general, "Start live updates at launch", "Begin monitoring connected sources when the app starts."), settings.startLiveOnLaunch, value => void patch({ startLiveOnLaunch: value }));
+  heading(general, "Updates");
+  const updatesRow = setting(general, "Check for updates automatically", "A little after start, at most once a day, ask GitHub for a newer version; it is offered, never installed without you.");
+  toggle(updatesRow, settings.checkUpdates !== false, value => void patch({ checkUpdates: value }));
+  const nowRow = setting(general, "Check now");
+  void api.appInfo().then(info => { nowRow.desc.textContent = `You have version ${info.version}.`; }).catch(() => {});
+  button(nowRow.control, "Check for updates", () => void checkForUpdate({ manual: true }));
 
   /* Workspace: the folder everything is stored in, importing, discovery. */
   const workspace = pane("workspace");

@@ -5,7 +5,7 @@ machine-learning training runs, and anything else that leaves files behind. Conn
 progress by itself, next to your projects and milestones. A floating widget, or a small circle, keeps the overview on
 screen, and your agent (Claude Code, Codex) can do all of it for you from a chat.
 
-> Status: **0.2.3, early release** for Windows and macOS (Apple Silicon). Builds are not yet code-signed.
+> Status: **0.3.0, early release** for Windows and macOS (Apple Silicon). Builds are not yet code-signed.
 
 ![Overview](docs/screenshots/overall.png)
 
@@ -144,6 +144,8 @@ Agents work through the `ma` command line the app keeps next to its settings
    the skill.
 3. **Connect** a folder, or start with **New project** for an umbrella such as a thesis; turn on **Live updates** and
    keep working as usual.
+
+From 0.3.0 the app updates itself: a newer version is offered a little after start (Settings → General → Updates).
 
 ## Privacy and safety
 

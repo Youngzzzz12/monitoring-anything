@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-10-17
+
+### Added
+- Automatic updates: a little after start (at most once a day) the app reads `latest.json` from the newest GitHub
+  release; a newer version is offered in a notice, and Update downloads the signed installer, installs it and
+  restarts. Settings → General → Updates turns the check off or runs it now. Update bundles are signed with the updater
+  key in the build workflow (`TAURI_SIGNING_PRIVATE_KEY`); `scripts/release-assets.mjs` prepares a release's files and
+  `latest.json` from the workflow's artifacts.
+
 ## [0.2.3] - 2026-10-17
 
 ### Fixed

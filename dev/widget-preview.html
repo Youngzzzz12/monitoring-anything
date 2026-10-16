@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Development preview of the floating widget with fixture data, served by the Vite dev server
+     (npm run dev → http://localhost:1420/dev/widget-preview.html?focus=paper&theme=dark).
+     No Tauri APIs are used; actions are logged to the console. Not part of the app bundle. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget preview</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body.rd-preview { display: grid; place-items: start; gap: 16px; padding: 16px; background: #6b7280; overflow: auto; }
+    .rd-preview-window { position: relative; width: var(--w, 320px); height: 540px; }
+    .rd-preview-window .rd-widget-frame { position: absolute; }
+  </style>
+  <script type="module" src="./widget-preview.ts"></script>
+</head>
+<body class="rd-preview">
+  <div id="app"></div>
+</body>
+</html>

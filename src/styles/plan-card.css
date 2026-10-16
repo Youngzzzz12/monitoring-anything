@@ -1,0 +1,337 @@
+/* Plan card (connect a folder) and the folder-drop veil. Ported from the Obsidian plugin stylesheet
+ * Research Dashboard/System/tools/obsidian-plugin/styles.css (2026-10-11), adapted to the app's dialog (.rd-modal,
+ * 26/28/22px padding, .rd-switch toggles) and to a window-wide drop veil. */
+/* ---------- Smart onboarding: the plan card ----------
+ * One calm sheet in the dashboard's language: grey/white chrome, hairlines, pill chips and one ink action (Connect);
+ * teal only for a measured progress bar. Tokens mirror the snippet's --rd-ink / --rd-chip (the modal sits outside the
+ * dashboard, so they carry literal fallbacks). Motion uses the snippet's :root steps; Subtle drops travel and loops,
+ * Off and Reduce motion drop everything, pseudo-elements included. */
+.rd-modal.rd-plan-shell { width: min(720px, 100%); }
+.rd-plan-card {
+  --rd-plan-chip: var(--rd-chip, rgb(28 30 36 / 5.5%));
+  --rd-plan-chip-hover: var(--rd-chip-hover, rgb(28 30 36 / 9%));
+  --rd-plan-line: var(--rd-line, rgb(28 30 36 / 9%));
+  --rd-plan-track: var(--rd-track, rgb(28 30 36 / 8%));
+  --rd-plan-ink: var(--rd-ink, color-mix(in srgb, var(--text-normal) 86%, transparent));
+  --rd-plan-on-ink: var(--background-primary);
+  --rd-plan-progress: var(--rd-progress, #009884);
+  --rd-plan-radius: 14px;
+  padding-bottom: 0;
+}
+.theme-dark .rd-plan-card {
+  --rd-plan-chip: var(--rd-chip, rgb(255 255 255 / 6.5%));
+  --rd-plan-chip-hover: var(--rd-chip-hover, rgb(255 255 255 / 10%));
+  --rd-plan-line: var(--rd-line, rgb(255 255 255 / 8%));
+  --rd-plan-track: var(--rd-track, rgb(255 255 255 / 8%));
+  --rd-plan-ink: var(--rd-ink, color-mix(in srgb, var(--text-normal) 88%, transparent));
+  --rd-plan-progress: var(--rd-progress, #24ab9c);
+}
+.rd-plan-card.is-entering > * { animation: rd-plan-in var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) both; }
+@keyframes rd-plan-in { from { opacity: 0; transform: translateY(4px); } }
+body.rd-motion-subtle .rd-plan-card.is-entering > * { animation-name: rd-plan-fade; }
+@keyframes rd-plan-fade { from { opacity: 0; } }
+/* Subtle keeps fades but no loops: the spinner and skeleton hold still (the elapsed clock still moves). */
+body.rd-motion-subtle .rd-plan-card :is(.rd-plan-spinner, .rd-plan-stats.is-skeleton .rd-plan-stat) { animation: none; }
+body.rd-motion-off .rd-plan-card, body.rd-motion-off .rd-plan-card *, body.rd-motion-off .rd-plan-card *::before,
+body.rd-motion-off .rd-plan-card *::after, body.rd-motion-off .rd-plan-card details::details-content { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .rd-plan-card, .rd-plan-card *, .rd-plan-card *::before, .rd-plan-card *::after, .rd-plan-card details::details-content { animation: none !important; transition: none !important; }
+}
+
+.rd-plan-header { margin-bottom: 12px; }
+.rd-plan-eyebrow { margin: 0 0 2px; color: var(--text-muted); font-size: 12px; font-weight: 500; letter-spacing: .01em; }
+.rd-connect-modal h2.rd-plan-title { margin: 0; font-size: 1.45rem; font-weight: 650; letter-spacing: -.018em; overflow-wrap: anywhere; }
+.rd-plan-where { display: flex; align-items: center; gap: 10px; margin-top: 8px; min-width: 0; }
+.rd-plan-where .rd-plan-path {
+  flex: 1 1 auto; min-width: 0; margin: 0; padding: 6px 10px; border: 0; border-radius: 8px; background: var(--rd-plan-chip);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-monospace); font-size: 11.5px; user-select: text;
+}
+.rd-plan-card button.rd-plan-link {
+  flex: none; height: auto; padding: 2px 4px; border: 0; background: none; box-shadow: none; color: var(--text-muted);
+  font-size: 12.5px; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px;
+  transition: color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), text-decoration-color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card button.rd-plan-link:hover:not(:disabled) { color: var(--text-normal); text-decoration-color: currentColor; }
+.rd-plan-card button.rd-plan-link:disabled { opacity: .45; cursor: default; }
+/* A drop on a project page also offers "Use as discovery folder": the links wrap under the path when space is short. */
+.rd-plan-where:has(.rd-plan-discovery) { flex-wrap: wrap; }
+
+/* Buttons: Connect is the one ink pill; every other button is a quiet chip pill (links and option rows excepted). */
+.rd-plan-card button.mod-cta {
+  height: auto; min-height: 30px; padding: 5px 16px; border: 0; border-radius: 999px; box-shadow: none;
+  background: var(--rd-plan-ink); color: var(--rd-plan-on-ink); font-size: 13px; font-weight: 550; cursor: pointer;
+  transition: opacity var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card button.mod-cta:hover:not(:disabled) { background: var(--rd-plan-ink); opacity: .88; }
+.rd-plan-card button.mod-cta:disabled { opacity: .35; cursor: default; }
+.rd-plan-card button:not(.mod-cta, .rd-plan-link, .rd-plan-option) {
+  height: auto; min-height: 30px; padding: 5px 14px; border: 0; border-radius: 999px; box-shadow: none;
+  background: var(--rd-plan-chip); color: var(--text-normal); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: background-color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card button:not(.mod-cta, .rd-plan-link, .rd-plan-option):hover:not(:disabled) { background: var(--rd-plan-chip-hover); }
+.rd-plan-card button:not(.mod-cta, .rd-plan-link, .rd-plan-option):disabled { opacity: .45; cursor: default; }
+.rd-plan-card button.rd-plan-chip-button.is-quiet { color: var(--text-muted); }
+.rd-plan-card button.rd-plan-chip-button.is-quiet:hover:not(:disabled) { color: var(--text-normal); }
+.rd-plan-card button:focus-visible, .rd-plan-card summary:focus-visible { outline: 2px solid var(--text-normal); outline-offset: 2px; box-shadow: none; }
+/* Toggles switch on in ink, not the theme accent. */
+.rd-plan-card .rd-switch input:checked + .rd-switch-track { background: var(--rd-plan-ink); }
+
+.rd-plan-section { margin-top: 14px; }
+.rd-plan-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.rd-plan-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -.005em; }
+.rd-plan-caption { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+
+/* Monitoring options: a radio list of quiet rows; the selected one gains a hairline ring and a filled dot. */
+.rd-plan-options { display: grid; gap: 6px; }
+.rd-plan-card button.rd-plan-option {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 10px; width: 100%; height: auto;
+  padding: 11px 12px; border: 0; border-radius: var(--rd-plan-radius); background: var(--rd-plan-chip); box-shadow: none;
+  color: var(--text-normal); font-weight: 400; text-align: left; white-space: normal; cursor: pointer;
+  transition: background-color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), box-shadow var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card button.rd-plan-option:hover:not(:disabled) { background: var(--rd-plan-chip-hover); }
+.rd-plan-card button.rd-plan-option.is-selected { background: var(--background-primary); box-shadow: 0 0 0 1px var(--rd-plan-ink), 0 1px 2px rgb(0 0 0 / 6%); }
+.rd-plan-card button.rd-plan-option:disabled { opacity: .55; cursor: default; }
+.rd-plan-radio { width: 16px; height: 16px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text-faint, var(--text-muted)); transition: box-shadow var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)); }
+.rd-plan-option.is-selected .rd-plan-radio { box-shadow: inset 0 0 0 5px var(--rd-plan-ink); }
+.rd-plan-option-body { min-width: 0; }
+.rd-plan-option-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.rd-plan-option-title { font-size: 13.5px; font-weight: 600; letter-spacing: -.008em; }
+.rd-plan-chip { padding: 1px 8px; border-radius: 999px; background: var(--rd-plan-chip); color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.rd-plan-option.is-selected .rd-plan-chip { background: var(--rd-plan-chip-hover); }
+.rd-plan-confidence { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: var(--text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.rd-plan-meter { position: relative; width: 44px; height: 4px; overflow: hidden; border-radius: 2px; background: var(--rd-plan-track); }
+.rd-plan-meter > span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--text-muted); }
+.rd-plan-rules, .rd-plan-option-errors, .rd-plan-preview-errors { margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.5; }
+.rd-plan-rules:empty { display: none; }
+.rd-plan-rules li { color: var(--text-muted); }
+.rd-plan-rules li::before { content: "·"; display: inline-block; width: 12px; color: var(--text-faint, var(--text-muted)); }
+.rd-plan-rules li.is-more { color: var(--text-faint, var(--text-muted)); }
+.rd-plan-rules.is-warnings li::before { content: "!"; font-weight: 600; }
+.rd-plan-option-errors li, .rd-plan-preview-errors li { color: var(--text-error); }
+.rd-plan-rationale { margin: 6px 0 0; color: var(--text-normal); font-size: 12.5px; line-height: 1.5; }
+.rd-plan-weak { margin-top: 2px; }
+.rd-plan-weak > .rd-plan-options { margin-top: 8px; }
+.rd-plan-card button.rd-plan-ask-link { display: block; margin: 8px 0 0; padding-left: 0; }
+/* With Other matches closed, the link shares its line, right-aligned. */
+.rd-plan-card .rd-plan-options:has(> details.rd-plan-weak:not([open])) + button.rd-plan-ask-link { margin: -21px 0 0 auto; }
+
+/* Disclosures use the dashboard's chevron summary: no marker, a small rotating caret, muted until hovered. */
+.rd-plan-card details > summary {
+  display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: var(--text-muted); font-size: 12px;
+  list-style: none; cursor: pointer; border-radius: 6px;
+  transition: color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card details > summary::-webkit-details-marker { display: none; }
+.rd-plan-card details > summary::before {
+  content: ""; flex: none; width: 5px; height: 5px; margin: 0 2px 0 1px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg);
+  transition: transform var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-plan-card details[open] > summary::before { transform: rotate(45deg); }
+.rd-plan-card details > summary:hover { color: var(--text-normal); }
+/* Opening eases the height and fades the content in, as on the dashboard. */
+.rd-plan-card details::details-content {
+  block-size: 0; overflow: clip; opacity: 0;
+  transition: block-size var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), opacity var(--rd-t-exit, 120ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), content-visibility var(--rd-t-move, 320ms) allow-discrete;
+}
+.rd-plan-card details[open]::details-content {
+  block-size: auto; opacity: 1;
+  transition: block-size var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), opacity var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) 60ms, content-visibility var(--rd-t-move, 320ms) allow-discrete;
+}
+@supports (interpolate-size: allow-keywords) { .rd-plan-card { interpolate-size: allow-keywords; } }
+.rd-plan-notes p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
+
+.rd-plan-nomatch { padding: 18px; border-radius: var(--rd-plan-radius); background: var(--rd-plan-chip); text-align: center; }
+.rd-plan-nomatch-title { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; }
+.rd-plan-card .rd-plan-nomatch button.rd-plan-ask { margin-top: 12px; background: var(--background-primary); }
+.rd-plan-nomatch + .rd-plan-options { margin-top: 8px; }
+
+/* An invalid agent plan: one sentence and a fix chip; the validator's messages under Details. */
+.rd-plan-problems { margin-top: 8px; padding: 10px 12px; border-radius: var(--rd-plan-radius); box-shadow: inset 0 0 0 1px var(--rd-plan-line); }
+.rd-plan-problems-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rd-plan-problems-title { margin: 0; color: var(--text-error); font-size: 12.5px; font-weight: 550; }
+.rd-plan-problem-details { margin-top: 6px; }
+
+/* Ask agent: an inset panel; while running, a spinner and an elapsed clock beside Stop. */
+.rd-plan-agent { position: relative; margin-top: 10px; padding: 12px; border-radius: var(--rd-plan-radius); box-shadow: inset 0 0 0 1px var(--rd-plan-line); }
+.rd-plan-agent-head { display: flex; align-items: baseline; gap: 8px; }
+.rd-plan-agent-title { font-size: 13px; font-weight: 600; }
+.rd-plan-agent-head .rd-plan-link { margin-left: auto; }
+.rd-plan-privacy { margin: 4px 0 8px; color: var(--text-muted); font-size: 11.5px; line-height: 1.45; }
+.rd-plan-card textarea.rd-plan-instructions, .rd-plan-card textarea.rd-plan-json { width: 100%; min-height: 54px; resize: vertical; border-radius: 10px; font-size: 12.5px; }
+.rd-plan-card textarea.rd-plan-json { min-height: 180px; font-family: var(--font-monospace); font-size: 11.5px; line-height: 1.5; tab-size: 2; }
+.rd-plan-agent-actions, .rd-plan-editor-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.rd-plan-agent-status { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rd-plan-spinner { flex: none; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--rd-plan-track); border-top-color: var(--rd-plan-ink); animation: rd-plan-spin .9s linear infinite; }
+@keyframes rd-plan-spin { to { transform: rotate(1turn); } }
+body.rd-motion-off .rd-plan-spinner { border-top-color: var(--rd-plan-track); }
+.rd-plan-agent-error { margin: 8px 0 0; }
+
+/* Preview from current files: open value-over-label figures (no boxes) on the chip tone; numbers are tabular. */
+.rd-plan-preview { padding: 12px 14px; border-radius: var(--rd-plan-radius); background: var(--rd-plan-chip); }
+.rd-plan-preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.rd-plan-preview-title { font-size: 13px; font-weight: 600; }
+.rd-plan-preview-status:empty { display: none; }
+.rd-plan-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px 14px; }
+.rd-plan-stat { min-height: 0; padding: 0; border-radius: 0; background: transparent; }
+.rd-plan-stat-value { font-size: 15px; font-weight: 600; letter-spacing: -.012em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rd-plan-stat-label { margin-top: 1px; color: var(--text-muted); font-size: 11.5px; }
+.rd-plan-stats.is-skeleton .rd-plan-stat { min-height: 36px; border-radius: 8px; background: var(--rd-plan-track); opacity: .6; animation: rd-plan-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes rd-plan-pulse { to { opacity: .3; } }
+.rd-plan-preview.is-loading .rd-plan-stats:not(.is-skeleton) { opacity: .55; transition: opacity var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)); }
+.rd-plan-progress-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-bottom: 12px; }
+.rd-plan-progress { height: 6px; overflow: hidden; border-radius: 3px; background: var(--rd-plan-track); }
+.rd-plan-progress > div { height: 100%; border-radius: inherit; background: var(--rd-plan-progress); transition: width var(--rd-t-data, 520ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)); }
+.rd-plan-progress-caption { color: var(--text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.rd-plan-metrics { display: grid; gap: 2px; margin-top: 10px; }
+.rd-plan-metric { display: flex; justify-content: space-between; gap: 12px; padding: 5px 2px; border-top: 1px solid var(--rd-plan-line); font-size: 12.5px; }
+.rd-plan-metric-label { color: var(--text-muted); }
+.rd-plan-metric-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rd-plan-preview .rd-plan-notes { margin-top: 10px; }
+
+.rd-plan-fields { margin-top: 12px; }
+.rd-plan-card .rd-plan-fields .setting-item { padding-block: 8px; }
+.rd-plan-fields .setting-item-description:empty { display: none; }
+.rd-plan-fields .setting-item-control select, .rd-plan-fields .setting-item-control input[type="text"] { max-width: min(20rem, 46vw); }
+/* Options: one disclosure whose summary restates the folded values. */
+.rd-plan-more { margin-top: 4px; border-top: 1px solid var(--rd-plan-line); }
+.rd-plan-card .rd-plan-more > summary { display: flex; width: 100%; padding-block: 10px 0; }
+.rd-plan-more-title { flex: none; color: var(--text-normal); font-size: 13px; font-weight: 500; }
+.rd-plan-more-values { min-width: 0; margin-left: auto; overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.rd-plan-more-body .setting-item:first-child { border-top: 0; }
+.rd-plan-editor { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--rd-plan-line); }
+.rd-plan-editor-head { display: grid; gap: 2px; margin-bottom: 6px; }
+.rd-plan-editor-title { font-size: 12.5px; font-weight: 600; }
+.rd-plan-editor-status:empty { display: none; }
+.rd-plan-editor-status { margin-top: 6px; }
+
+.rd-plan-save { margin-top: 16px; padding: 12px; border-radius: var(--rd-plan-radius); background: var(--rd-plan-chip); }
+.rd-plan-save .setting-item { padding-block: 8px; border: 0; }
+
+/* The footer stays reachable at the bottom of a long sheet, on the frosted chrome tone. Its leading slot holds what
+ * concerns Connect: a muted reason while it is unavailable, then any error or progress, in place of the reason. */
+.rd-plan-footer {
+  position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 14px -28px -22px; padding: 12px 28px 16px; border-radius: 0 0 20px 20px;
+  border-top: 1px solid var(--rd-plan-line);
+  background: color-mix(in srgb, var(--background-primary) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+.rd-plan-footer-leading { display: grid; justify-items: start; gap: 2px; min-width: 0; }
+.rd-plan-footer-reason { margin: 0; color: var(--text-muted); font-size: 12px; }
+.rd-plan-footer-leading:has(.rd-connect-error:not(:empty), .rd-connect-progress:not(:empty)) .rd-plan-footer-reason { display: none; }
+.rd-plan-card .rd-plan-footer .rd-connect-error:not(:empty), .rd-plan-card .rd-plan-footer .rd-connect-progress:not(:empty) { margin: 0; font-size: 12px; line-height: 1.4; }
+.rd-plan-footer-trailing { display: flex; flex: none; gap: 8px; margin-left: auto; }
+.rd-plan-card .rd-connect-progress:not(:empty) { margin: 8px 0 12px; }
+
+@media (max-width: 700px) {
+  .rd-plan-where { flex-wrap: wrap; }
+  .rd-plan-confidence { margin-left: 0; }
+  .rd-plan-footer { flex-wrap: wrap; }
+}
+
+/* ---------- Folder drop onto the native dashboard ----------
+ * A frosted veil with a dashed hairline frame; it never takes pointer events, so the page keeps receiving the drag.
+ * It fades out on the exit step (is-leaving) before it is removed. */
+.rd-drop-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 14px; pointer-events: none;
+  background: color-mix(in srgb, var(--background-primary) 72%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  animation: rd-plan-fade var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) both;
+}
+.rd-drop-overlay.is-leaving { opacity: 0; transition: opacity var(--rd-t-exit, 120ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)); }
+.rd-drop-overlay::before {
+  content: ""; position: absolute; inset: 14px; border-radius: 22px;
+  border: 1.5px dashed color-mix(in srgb, var(--text-normal) 32%, transparent);
+}
+.rd-drop-card {
+  position: relative; display: grid; justify-items: center; gap: 4px; max-width: 360px; text-align: center;
+  animation: rd-drop-rise var(--rd-t-move, 320ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) both;
+}
+@keyframes rd-drop-rise { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.rd-drop-glyph {
+  width: 48px; height: 48px; margin-bottom: 8px; border-radius: 50%;
+  background: var(--background-primary) no-repeat center / 24px 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h7l2 2h9v11H3z M3 7V4h7l2 3 M12 12v5 M9.5 14.5L12 17l2.5-2.5'/%3E%3C/svg%3E");
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 0 0 1px rgb(0 0 0 / 4%);
+}
+.theme-dark .rd-drop-glyph { box-shadow: 0 0 0 1px var(--background-modifier-border); }
+/* A drop the dashboard cannot take (a file, several items): the frame and glyph turn quiet, the copy says why. */
+.rd-drop-overlay.is-rejecting::before { border-color: color-mix(in srgb, var(--text-error) 45%, transparent); }
+.rd-drop-overlay.is-rejecting .rd-drop-glyph { opacity: .45; }
+.rd-drop-title { color: var(--text-normal); font-size: 15px; font-weight: 600; letter-spacing: -.012em; }
+.rd-drop-caption { color: var(--text-muted); font-size: 12.5px; }
+body.rd-motion-subtle .rd-drop-card { animation-name: rd-plan-fade; }
+body.rd-motion-off :is(.rd-drop-overlay, .rd-drop-card) { animation: none; transition: none; }
+@media (prefers-reduced-motion: reduce) { :is(.rd-drop-overlay, .rd-drop-card) { animation: none; transition: none; } }
+
+.rd-settings-note { margin: -4px 0 10px; }
+
+/* App adaptations: the card fills the dialog's content; textareas share the field style. */
+.rd-plan-shell .rd-modal-content > .rd-plan-card > h2:first-child { margin-top: 0; }
+.rd-modal textarea { box-sizing: border-box; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--background-primary);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border); color: var(--text-normal); font: inherit; font-size: 12.5px; line-height: 1.45; resize: vertical; }
+.rd-modal textarea:focus-visible { outline: 2px solid var(--text-normal); outline-offset: 1px; }
+.rd-modal .setting-item-control textarea { width: min(26rem, 100%); }
+.rd-plan-card .rd-plan-path { font-family: var(--font-monospace); }
+.rd-plan-folder-footer { margin-top: 18px; }
+.rd-discovery-folder .setting-item-control { max-width: 100%; }
+.rd-discovery-options[hidden] { display: none; }
+.rd-settings-section { margin-top: 4px; }
+/* The dialog scrolls with 22px bottom padding; the sticky footer pins to its very edge, not above the padding. */
+.rd-plan-shell .rd-plan-footer { bottom: -22px; }
+/* Agent choices: Smart monitoring (runs now) and Add requirements (field first). Centred in the no-match panel; a quiet
+ * right-aligned line under a detected type. */
+.rd-plan-agent-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+.rd-plan-card .rd-plan-nomatch .rd-plan-choices-privacy { margin: 10px auto 0; max-width: 46ch; }
+.rd-plan-choices-privacy .rd-plan-link { padding: 0 2px; font-size: inherit; }
+.rd-plan-ask-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 4px 6px; margin-top: 8px; }
+.rd-plan-card .rd-plan-ask-line button.rd-plan-link { padding: 2px 2px; }
+.rd-plan-card .rd-plan-ask-line button.rd-plan-smart { color: var(--text-normal); font-weight: 550; }
+
+/* ---------- Connect an agent (first-run guide, plan card, Settings) ----------
+ * Found agents as quiet rows (a filled dot marks the selected one), a muted "not found" with an install link, the API
+ * route folded away, and the selected agent's model and connection test at the bottom. */
+.rd-agent-setup { display: grid; gap: 10px; margin-top: 10px; }
+.rd-agent-list { display: grid; gap: 4px; }
+.rd-agent-option { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--rd-chip, rgb(28 30 36 / 6%)); }
+.rd-agent-option.is-selected { background: var(--background-primary); box-shadow: 0 0 0 1px var(--text-normal); }
+.rd-agent-option.is-missing { background: transparent; box-shadow: inset 0 0 0 1px var(--background-modifier-border); }
+.rd-agent-option.is-missing strong { color: var(--text-muted); }
+.rd-agent-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text-faint); }
+.rd-agent-option.is-selected .rd-agent-dot { box-shadow: inset 0 0 0 4px var(--text-normal); }
+.rd-agent-copy { display: grid; min-width: 0; }
+.rd-agent-copy strong { font-size: 13px; font-weight: 600; }
+.rd-agent-copy .rd-caption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-agent-chip { padding: 1px 8px; border-radius: 999px; background: var(--rd-chip, rgb(28 30 36 / 6%)); color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.rd-modal .rd-agent-setup button.rd-plan-link { height: auto; min-height: 0; padding: 2px 4px; background: none; color: var(--text-muted); font-size: 12px; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
+.rd-modal .rd-agent-setup button.rd-plan-link:hover { color: var(--text-normal); text-decoration-color: currentColor; }
+.rd-agent-again { justify-self: start; }
+.rd-agent-none { margin: 0; }
+.rd-agent-api > summary { cursor: pointer; color: var(--text-muted); font-size: 12px; }
+.rd-agent-api-body { display: grid; gap: 6px; margin-top: 8px; }
+.rd-modal .rd-agent-setup :is(.rd-agent-field, .rd-agent-model) { box-sizing: border-box; width: 100%; min-height: 30px; padding: 4px 10px; border: 0; border-radius: 9px; background: var(--background-primary); box-shadow: inset 0 0 0 1px var(--background-modifier-border); color: var(--text-normal); font: inherit; font-size: 12.5px; }
+.rd-agent-selected { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--background-modifier-border); }
+.rd-agent-selected-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.rd-agent-status { margin: 0; color: var(--text-muted); font-size: 12px; }
+.rd-agent-status.is-ok { color: var(--text-normal); }
+.rd-agent-status.is-ok::before { content: "✓ "; color: var(--rd-progress, #24ab9c); font-weight: 700; }
+.rd-agent-status.is-error { color: var(--text-error); }
+.rd-agent-setup-modal { width: min(560px, 100%); }
+.rd-plan-agent-setup .rd-agent-setup { margin-top: 4px; }
+.rd-settings-advanced { margin-top: 10px; }
+.rd-settings-advanced > summary { cursor: pointer; padding: 6px 0; color: var(--text-muted); font-size: 12px; }
+/* Use Monitoring Anything from your agent: one quiet row per agent with its state and one action. */
+.rd-agent-skill { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--background-modifier-border); }
+.rd-agent-skill > strong { font-size: 13px; font-weight: 600; }
+.rd-agent-skill > .rd-caption { margin: 0 0 4px; }
+.rd-agent-skill-line { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.rd-agent-skill-name { font-size: 12.5px; font-weight: 550; }
+.rd-agent-skill-spacer { flex: 1; }
+.rd-agent-skill-state.is-installed { color: var(--text-normal); }
+.rd-agent-skill-state.is-installed::before { content: "✓ "; color: var(--rd-progress, #24ab9c); font-weight: 700; }
+.rd-agent-skill-all { justify-self: start; margin-top: 4px; }

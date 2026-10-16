@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "id": "ml-training",
+  "title": "Machine-learning training run",
+  "description": "Training runs that log metrics to CSV (PyTorch Lightning CSVLogger metrics.csv, or a Keras CSVLogger history.csv). Reports epochs (against max_epochs from hparams.yaml when present), best validation loss and the latest losses and accuracy; checkpoints are listed as results. TensorBoard-only runs are recognised but their event files are not read.",
+  "projectType": "simulation",
+  "origin": {
+    "createdBy": "builtin",
+    "approvedAt": null,
+    "version": 1,
+    "builtin": true
+  },
+  "detect": {
+    "allOf": [],
+    "anyOf": [
+      {"glob": "**/metrics.csv", "minCount": 1, "description": "a metrics.csv training log"},
+      {"glob": "**/history.csv", "minCount": 1, "description": "a history.csv training log"},
+      {"glob": "**/lightning_logs/**/hparams.yaml", "minCount": 1, "description": "PyTorch Lightning logs"},
+      {"glob": "**/events.out.tfevents.*", "minCount": 1, "description": "TensorBoard event files"},
+      {"glob": "**/*.ckpt", "minCount": 1, "description": "model checkpoints"}
+    ],
+    "noneOf": [
+      {"glob": "**/*.tex", "description": "no LaTeX sources"}
+    ],
+    "threshold": 0.4
+  },
+  "extract": {
+    "runtime": {
+      "currentValue": {"csv": "**/metrics.csv", "column": "epoch", "aggregate": "max"},
+      "targetValue": {"regex": "max_epochs:\\s*(\\d+)", "file": "**/hparams.yaml", "match": "last"},
+      "unit": "epochs"
+    },
+    "metrics": [
+      {"id": "best-val-loss", "label": "Best val loss", "value": {"csv": "**/metrics.csv", "column": "val_loss", "aggregate": "min"}},
+      {"id": "train-loss", "label": "Train loss", "value": {"csv": "**/metrics.csv", "column": "train_loss", "aggregate": "last"}},
+      {"id": "val-acc", "label": "Val accuracy", "value": {"csv": "**/metrics.csv", "column": "val_acc", "aggregate": "last"}},
+      {"id": "keras-epochs", "label": "Epochs (Keras)", "value": {"csv": "**/history.csv", "column": "epoch", "aggregate": "count"}},
+      {"id": "keras-val-loss", "label": "Best val loss (Keras)", "value": {"csv": "**/history.csv", "column": "val_loss", "aggregate": "min"}}
+    ],
+    "artifacts": [
+      {"glob": "**/*.ckpt", "type": "checkpoint"},
+      {"glob": "**/*.pt", "type": "checkpoint"},
+      {"glob": "**/*.h5", "type": "checkpoint"},
+      {"glob": "**/*.keras", "type": "checkpoint"}
+    ]
+  },
+  "subprojectRole": "standalone"
+}

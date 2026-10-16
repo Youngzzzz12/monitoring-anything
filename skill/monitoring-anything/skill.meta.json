@@ -1,0 +1,10 @@
+{
+  "imported_at": null,
+  "compatible_with": [
+    "codex",
+    "claude"
+  ],
+  "name": "monitoring-anything",
+  "created_by": "claude",
+  "canonical": true
+}

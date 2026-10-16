@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0",
+  "id": "abaqus-job",
+  "title": "Abaqus job",
+  "description": "An Abaqus input deck and/or its status logs (.sta, .msg, .log). Extraction uses the existing Abaqus adapter: terminal evidence and recent log activity; no ODB is read.",
+  "projectType": "simulation",
+  "sourceKind": "abaqus",
+  "origin": {
+    "createdBy": "builtin",
+    "approvedAt": null,
+    "version": 1,
+    "builtin": true
+  },
+  "detect": {
+    "anyOf": [
+      {
+        "glob": "**/*.sta",
+        "description": "Abaqus status files (.sta)"
+      },
+      {
+        "glob": "**/*.msg",
+        "description": "Abaqus message files (.msg)"
+      },
+      {
+        "contains": {
+          "glob": "**/*.inp",
+          "regex": "^\\s*\\*(?:HEADING|PART|NODE|ELEMENT|STEP|INCLUDE|ASSEMBLY|MATERIAL)\\b",
+          "maxBytes": 65536
+        },
+        "description": "an Abaqus input deck (.inp keywords)"
+      }
+    ],
+    "noneOf": [],
+    "threshold": 0.7
+  },
+  "extract": {
+    "adapter": "abaqus"
+  },
+  "milestoneTemplate": "simulation-basic",
+  "subprojectRole": "standalone"
+}

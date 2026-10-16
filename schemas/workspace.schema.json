@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Youngzzzz12/monitoring-anything/schemas/workspace.schema.json",
+  "title": "Monitoring Anything workspace marker (workspace.json)",
+  "description": "Marks a folder as a Monitoring Anything workspace. The collector switches to the app layout when this file exists.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "name"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "kind": { "enum": ["monitoring-anything-workspace", "research-dashboard-workspace"] },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "layout": { "const": "app" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

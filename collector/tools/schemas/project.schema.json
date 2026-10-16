@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Monitoring Anything project configuration",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "kind",
+    "parentId",
+    "projectNote",
+    "source",
+    "collector",
+    "adapter"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "dashboardProjectId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "description": "Optional logical project owner. Folder connections set this; source-only register does not."
+    },
+    "profileId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "description": "Optional monitoring profile used by connect --profile/--profile-stdin (built-in or user). Absent for legacy connections."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "latex",
+        "abaqus",
+        "isale"
+      ]
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "projectNote": {
+      "type": "string",
+      "pattern": "^Research Dashboard/System/records/[a-z0-9][a-z0-9_-]{0,63}/project\\.md$"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "rootAlias",
+        "path"
+      ],
+      "properties": {
+        "rootAlias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "collector": {
+      "type": "object",
+      "required": [
+        "hostId",
+        "intervalSeconds",
+        "staleAfterSeconds"
+      ],
+      "properties": {
+        "hostId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "staleAfterSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "description": "Kind-specific options are validated by the local CLI; examples are not registered projects. A declarative profile stores {engine: 'declarative', profileId, profileVersion, extract} (see monitoring-profile.schema.json $defs/declarative); kind then only selects the dashboard display family."
+    }
+  }
+}

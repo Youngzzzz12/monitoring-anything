@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Monitoring Anything monitoring profile",
+  "description": "Detection rules plus extraction rules for one kind of research folder. Built-in profiles (System/profiles/builtin) delegate extraction to an existing adapter; user profiles (System/profiles/user/<id>.json) normally use the declarative collector. profiles.py validates these semantics in full (regex compilation, glob safety, byte caps, rule counts); this schema documents the shape.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "title", "projectType", "detect", "extract"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "id": {"$ref": "#/$defs/id", "description": "Equals the file name without .json."},
+    "title": {"type": "string", "minLength": 1, "maxLength": 200},
+    "description": {"type": "string", "maxLength": 1000},
+    "projectType": {"enum": ["thesis", "paper", "simulation", "experiment", "other"], "description": "Type of a project created from this profile."},
+    "sourceKind": {"enum": ["latex", "abaqus", "isale"], "description": "Dashboard display family recorded as the source config kind. Adapter-backed profiles must equal extract.adapter; declarative profiles default to abaqus (generic run + case rendering)."},
+    "origin": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "createdBy": {"type": ["string", "null"], "maxLength": 120, "description": "builtin, user, agent:<name>, ..."},
+        "approvedAt": {"type": ["string", "null"], "format": "date-time"},
+        "savedAt": {"type": ["string", "null"], "format": "date-time", "description": "Set by profiles save."},
+        "version": {"type": "integer", "minimum": 1, "description": "Incremented by profiles save when a user profile changes."},
+        "basedOn": {"type": ["string", "null"], "maxLength": 120},
+        "builtin": {"type": "boolean"}
+      }
+    },
+    "detect": {
+      "type": "object", "additionalProperties": false,
+      "description": "All allOf rules and at least one anyOf rule (when listed) are required; any noneOf match excludes the profile. Confidence = 0.7 + 0.3 x (anyOf share matched), or 1.0 without anyOf; a partial match scores at most 0.6. At most 20 rules.",
+      "properties": {
+        "allOf": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+        "anyOf": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+        "noneOf": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+        "threshold": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "default": 0.7}
+      }
+    },
+    "extract": {
+      "oneOf": [
+        {"type": "object", "required": ["adapter"], "additionalProperties": false,
+         "properties": {"adapter": {"enum": ["latex", "abaqus", "isale"]}},
+         "description": "Use an existing adapter; connect needs the inspected adapter options (inspect --source ... profiles[].adapter)."},
+        {"$ref": "#/$defs/declarative"}
+      ]
+    },
+    "milestoneTemplate": {
+      "description": "Template ID from System/profiles/milestones, an inline list of static tasks, or null.",
+      "oneOf": [
+        {"$ref": "#/$defs/id"},
+        {"type": "array", "maxItems": 50, "items": {"type": "object", "required": ["title"], "additionalProperties": false,
+                                                   "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 300},
+                                                                  "when": {"type": "string", "description": "Informational only; not evaluated."}}}},
+        {"type": "null"}
+      ]
+    },
+    "subprojectRole": {"enum": ["standalone", "part"], "default": "standalone",
+                       "description": "standalone: may become its own (sub-)project; part: belongs to a parent source (a new chapter, an extra case)."}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "glob": {"type": "string", "minLength": 1, "maxLength": 256,
+             "description": "Relative POSIX glob, case-insensitive. * ? [..] match within a segment; a whole ** segment matches zero or more folders. No absolute paths or '..'. Wildcards skip .git, node_modules, __pycache__, venv and similar tool folders."},
+    "regex": {"type": "string", "minLength": 1, "maxLength": 500,
+              "description": "Python regular expression, applied case-insensitively and multiline. Nested quantifiers such as (a+)+ are rejected."},
+    "rule": {
+      "type": "object",
+      "oneOf": [
+        {"required": ["glob"], "properties": {"glob": {"$ref": "#/$defs/glob"}, "minCount": {"type": "integer", "minimum": 1, "maximum": 10000, "default": 1}, "description": {"type": "string", "maxLength": 160}}, "additionalProperties": false},
+        {"required": ["contains"], "properties": {
+          "contains": {"type": "object", "required": ["glob", "regex"], "additionalProperties": false,
+                       "properties": {"glob": {"$ref": "#/$defs/glob"}, "regex": {"$ref": "#/$defs/regex"},
+                                      "maxBytes": {"type": "integer", "minimum": 1, "maximum": 262144, "default": 65536, "description": "Head bytes read per file; at most 50 files per rule."}}},
+          "minCount": {"type": "integer", "minimum": 1, "maximum": 10000, "default": 1},
+          "description": {"type": "string", "maxLength": 160}}, "additionalProperties": false}
+      ]
+    },
+    "value": {
+      "description": "A value rule. Missing evidence yields null plus a warning, never zero.",
+      "oneOf": [
+        {"type": "number", "description": "Literal (e.g. a known targetValue or planned count)."},
+        {"type": "object", "required": ["countGlob"], "additionalProperties": false, "properties": {"countGlob": {"$ref": "#/$defs/glob"}}},
+        {"type": "object", "required": ["glob"], "additionalProperties": false, "properties": {"glob": {"$ref": "#/$defs/glob"}}, "description": "Alias of countGlob."},
+        {"type": "object", "required": ["regex", "file"], "additionalProperties": false, "properties": {
+          "regex": {"$ref": "#/$defs/regex"}, "file": {"$ref": "#/$defs/glob", "description": "Newest matching file is read."},
+          "group": {"type": ["string", "integer"], "description": "Default: named group 'value', else group 1, else the whole match."},
+          "match": {"enum": ["last", "first", "count"], "default": "last"},
+          "type": {"enum": ["number", "integer", "string"], "default": "number"},
+          "maxBytes": {"type": "integer", "minimum": 1, "maximum": 2097152, "default": 2097152},
+          "tail": {"type": "boolean", "default": true}}},
+        {"type": "object", "required": ["jsonPath"], "additionalProperties": false, "properties": {
+          "jsonPath": {"type": "string", "description": "'file.json#$.a.b[0].length' or '$.a' with file. Supports .key, [n], [-n], ['key'], .length."},
+          "file": {"$ref": "#/$defs/glob"}, "type": {"enum": ["number", "integer", "string"]}}},
+        {"type": "object", "required": ["docx"], "additionalProperties": false, "properties": {
+          "docx": {"$ref": "#/$defs/glob"}, "measure": {"enum": ["words", "headings", "comments", "revisions"], "default": "words",
+            "description": "Newest matching .docx: body words (CJK characters count one each), headings, comments or tracked revisions."},
+          "type": {"enum": ["number", "integer", "string"]}}},
+        {"type": "object", "required": ["csv", "column"], "additionalProperties": false, "properties": {
+          "csv": {"$ref": "#/$defs/glob"}, "column": {"type": ["string", "integer"], "description": "Header name (case-insensitive) or zero-based index."},
+          "aggregate": {"enum": ["last", "first", "max", "min", "sum", "mean", "count"], "default": "last"},
+          "delimiter": {"type": "string", "minLength": 1, "maxLength": 1, "default": ","},
+          "files": {"enum": ["newest", "all"], "default": "newest"},
+          "type": {"enum": ["number", "integer", "string"]},
+          "maxBytes": {"type": "integer", "minimum": 1, "maximum": 2097152}}}
+      ]
+    },
+    "log": {
+      "type": "object", "additionalProperties": false,
+      "description": "Last explicit terminal evidence wins (failure after success = failed). 'running' requires the running pattern and a file modified within activeWindowSeconds.",
+      "properties": {
+        "fromLog": {"$ref": "#/$defs/glob"}, "glob": {"$ref": "#/$defs/glob"},
+        "success": {"$ref": "#/$defs/regex"}, "failure": {"$ref": "#/$defs/regex"}, "running": {"$ref": "#/$defs/regex"},
+        "runStart": {"$ref": "#/$defs/regex", "description": "Only text after the last match is classified (append-only logs)."},
+        "activeWindowSeconds": {"type": "number", "minimum": 0, "default": 120},
+        "maxBytes": {"type": "integer", "minimum": 1, "maximum": 2097152},
+        "maxFiles": {"type": "integer", "minimum": 1, "maximum": 500}
+      }
+    },
+    "declarative": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "description": "Generic declarative collector. Maps into the snapshot fields runtime, cases, artifacts and details; nothing is executed or written.",
+      "properties": {
+        "runtime": {"type": "object", "additionalProperties": false, "properties": {
+          "status": {"allOf": [{"$ref": "#/$defs/log"}], "required": ["fromLog"], "description": "Newest file matching fromLog -> runtime.status and runId."},
+          "currentValue": {"$ref": "#/$defs/value"}, "targetValue": {"$ref": "#/$defs/value"},
+          "step": {"oneOf": [{"$ref": "#/$defs/value"}, {"type": "string"}]},
+          "unit": {"type": ["string", "null"], "maxLength": 32}}},
+        "cases": {"type": "object", "additionalProperties": false, "properties": {
+          "planned": {"$ref": "#/$defs/value"}, "completed": {"$ref": "#/$defs/value"},
+          "running": {"$ref": "#/$defs/value"}, "failed": {"$ref": "#/$defs/value"},
+          "fromLogs": {"allOf": [{"$ref": "#/$defs/log"}], "required": ["glob"], "description": "Classify one log per case; planned defaults to the number of logs."}}},
+        "artifacts": {"type": "array", "items": {"type": "object", "required": ["glob"], "additionalProperties": false, "properties": {
+          "glob": {"$ref": "#/$defs/glob"}, "type": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$"},
+          "label": {"type": "string", "maxLength": 120}, "max": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}}}},
+        "metrics": {"type": "array", "maxItems": 50, "items": {"type": "object", "required": ["id", "value"], "additionalProperties": false, "properties": {
+          "id": {"$ref": "#/$defs/id"}, "label": {"type": "string", "maxLength": 120}, "unit": {"type": ["string", "null"], "maxLength": 32},
+          "value": {"$ref": "#/$defs/value"}}}, "description": "Written to details as {kind: metric, id, label, value, unit}."},
+        "limits": {"type": "object", "additionalProperties": false, "properties": {
+          "maxBytes": {"type": "number", "minimum": 1, "maximum": 16777216, "default": 8388608},
+          "seconds": {"type": "number", "minimum": 1, "maximum": 20, "default": 10},
+          "maxEntries": {"type": "number", "minimum": 1, "maximum": 50000, "default": 20000}}}
+      }
+    }
+  }
+}

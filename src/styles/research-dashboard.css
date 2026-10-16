@@ -1,0 +1,975 @@
+/* Ported verbatim from the Obsidian vault snippet .obsidian/snippets/research-dashboard.css (2026-10-10).
+ * Obsidian-only selectors (Canvas, Markdown embeds, Dataview) are harmless here; theme tokens such as
+ * --background-primary are supplied by app.css. Keep this file close to the reference so fixes can flow both ways. */
+/* Research Dashboard: flowing sections for the native view, Canvas cards and embeds.
+ * Lists sit on the page; only charts get a tile, and related tiles join into one surface.
+ * Tokens first; components are written against roles so light/dark swap in one place.
+ * Interface chrome is one grey/white family; status is told apart by tone. Colour lives only
+ * in charts: teal progress, amber overdue (pair validated for colour-vision separation in both
+ * modes), and writing in graphite — a soft 7-day band with today's solid bar inside it.
+ */
+/* @settings
+name: Research Dashboard
+id: research-dashboard
+settings:
+  -
+    id: rd-card-radius
+    title: Tile radius
+    type: variable-number-slider
+    default: 22
+    min: 10
+    max: 30
+    step: 1
+    format: px
+  -
+    id: rd-density-space
+    title: Tile padding
+    type: variable-number-slider
+    default: 24
+    min: 14
+    max: 36
+    step: 2
+    format: px
+  -
+    id: rd-plain-backdrop
+    title: Plain background
+    description: Turn off the tinted backdrop behind the page
+    type: class-toggle
+    default: false
+  -
+    id: rd-motion
+    title: Motion
+    description: Subtle shortens movement and drops the update glow; Off removes animation. The system Reduce motion setting always wins.
+    type: class-select
+    allowEmpty: false
+    default: none
+    options:
+      -
+        label: Full
+        value: none
+      -
+        label: Subtle
+        value: rd-motion-subtle
+      -
+        label: "Off"
+        value: rd-motion-off
+*/
+
+/* ---------- Tokens ---------- */
+/* Motion steps live on :root so ::view-transition-* pseudo-elements (which inherit from html) and the Connector share them.
+ * Exits 120ms, entrances and fades 200ms, every geometry move 320ms on --rd-c-move, data tweens 520ms.
+ * --rd-c-enter is only for opacity and short entrance offsets; --rd-spring only for press feedback and chevrons. */
+:root { --rd-t-exit:120ms; --rd-t-enter:200ms; --rd-t-move:320ms; --rd-t-data:520ms; --rd-c-move:cubic-bezier(.2,0,0,1); --rd-c-enter:cubic-bezier(.16,1,.3,1); }
+:is(.rd-dashboard,.rd-native-dashboard,.research-dashboard,.research-dashboard-canvas) {
+ --rd-radius:var(--rd-card-radius,22px); --rd-radius-sm:calc(var(--rd-radius) * .6); --rd-space:var(--rd-density-space,24px);
+ --rd-gap:14px; --rd-flow:30px;
+ --rd-text:var(--text-normal); --rd-muted:var(--text-muted); --rd-faint:var(--text-faint,var(--text-muted)); --rd-accent:var(--rd-text);
+ /* One frosted surface for floating chrome: tooltip, menus and the Connector's top bar. */
+ --rd-frost-bg:color-mix(in srgb,var(--background-primary) 86%,transparent); --rd-frost-filter:blur(20px) saturate(160%);
+ --rd-glass:rgb(255 255 255 / 80%); --rd-glass-shadow:none; --rd-popover:var(--rd-frost-bg);
+ --rd-chip:rgb(28 30 36 / 5.5%); --rd-chip-hover:rgb(28 30 36 / 9%);
+ --rd-sub:var(--rd-chip); --rd-sub-hover:var(--rd-chip-hover); --rd-quiet:var(--rd-chip); --rd-surface:var(--rd-glass);
+ --rd-track:rgb(28 30 36 / 8%); --rd-line:rgb(28 30 36 / 9%); --rd-line-strong:rgb(28 30 36 / 20%);
+ --rd-ink:color-mix(in srgb,var(--rd-text) 86%,transparent); --rd-on-ink:var(--background-primary);
+ --rd-writing:var(--rd-ink); --rd-today:var(--rd-writing); --rd-week:color-mix(in srgb,var(--rd-writing) 30%,transparent);
+ --rd-mid:color-mix(in srgb,var(--rd-text) 42%,transparent);
+ --rd-progress:#009884; --rd-on-progress:#fff; --rd-overdue:#b7791f;
+ --rd-good:var(--rd-muted); --rd-warn:var(--rd-text); --rd-bad:var(--rd-text);
+ /* Legacy names map onto the steps: fast = fades, base = moves and press feedback, slow = data. */
+ --rd-dur-fast:var(--rd-t-enter); --rd-dur:var(--rd-t-move); --rd-dur-slow:var(--rd-t-data);
+ --rd-ease:var(--rd-c-move); --rd-ease-out:var(--rd-c-enter);
+ --rd-spring:linear(0, 0.014 2%, 0.052 4%, 0.107 6%, 0.172 8%, 0.245 10%, 0.359 13%, 0.470 16%, 0.607 20%, 0.723 24%, 0.817 28%, 0.888 32%, 0.939 36%, 0.975 40%, 1.002 45%, 1.015 50%, 1.020 56%, 1.018 63%, 1.011 72%, 1.004 84%, 1);
+ --rd-rise:12px; --rd-roll:.42em; --rd-tip-rise:4px;
+ color:var(--rd-text); font-family:var(--font-interface,var(--font-text));
+}
+/* Motion preference (Style Settings): Subtle keeps continuity but travels less and never overshoots. */
+body.rd-motion-subtle :is(.rd-dashboard,.rd-native-dashboard,.research-dashboard,.research-dashboard-canvas) { --rd-spring:var(--rd-ease-out); --rd-rise:6px; --rd-roll:.22em; --rd-tip-rise:2px; }
+.theme-dark :is(.rd-dashboard,.rd-native-dashboard,.research-dashboard,.research-dashboard-canvas),
+:is(.rd-dashboard,.rd-native-dashboard,.research-dashboard,.research-dashboard-canvas).theme-dark {
+ --rd-glass:rgb(255 255 255 / 4.5%);
+ --rd-chip:rgb(255 255 255 / 6.5%); --rd-chip-hover:rgb(255 255 255 / 10%);
+ --rd-track:rgb(255 255 255 / 8%); --rd-line:rgb(255 255 255 / 8%); --rd-line-strong:rgb(255 255 255 / 20%);
+ --rd-ink:color-mix(in srgb,var(--rd-text) 88%,transparent);
+ --rd-progress:#24ab9c; --rd-on-progress:#0b1f1c; --rd-overdue:#c2842a;
+}
+
+/* ---------- Native view: page and grid ---------- */
+.rd-native-dashboard {
+ container-type:inline-size; container-name:research-app; height:100%; overflow:auto; scroll-behavior:smooth; padding:34px 36px 56px;
+ background:
+  radial-gradient(60% 50% at 0% 0%,rgb(255 255 255 / 55%),transparent 70%),
+  radial-gradient(45% 45% at 100% 2%,rgb(255 255 255 / 35%),transparent 70%),
+  radial-gradient(65% 55% at 55% 100%,rgb(0 0 0 / 3%),transparent 72%),
+  var(--background-secondary);
+}
+.theme-dark .rd-native-dashboard {
+ background:
+  radial-gradient(60% 50% at 0% 0%,rgb(255 255 255 / 6%),transparent 70%),
+  radial-gradient(45% 45% at 100% 0%,rgb(255 255 255 / 3.5%),transparent 70%),
+  radial-gradient(70% 55% at 50% 100%,rgb(0 0 0 / 18%),transparent 72%),
+  var(--background-primary);
+}
+body.rd-plain-backdrop .rd-native-dashboard { background:var(--background-primary); }
+.rd-app-grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:var(--rd-flow) 44px; max-width:1240px; margin:0 auto; }
+.rd-app-panel { grid-column:span 12; min-width:0; border-radius:var(--rd-radius); }
+.rd-app-grid:not(.is-project)>.rd-app-panel[data-mode="projects"] { grid-column:span 8; }
+.rd-app-grid:not(.is-project)>.rd-app-panel[data-mode="attention"] { grid-column:span 4; }
+.rd-app-grid.is-project>.rd-app-panel[data-mode="project-overview"] { order:1; }
+.rd-app-grid.is-project>.rd-app-panel[data-mode="paper-progress"] { order:2; margin-top:calc(var(--rd-gap) - var(--rd-flow)); }
+.rd-app-grid.is-project>.rd-app-panel[data-mode="runs"] { order:3; grid-column:span 7; }
+.rd-app-grid.is-project>.rd-app-panel[data-mode="milestones"] { order:4; grid-column:span 5; }
+/* Without a Live monitor (no sources) milestones take the full row instead of leaving an empty column. */
+.rd-app-grid.is-project:has(>.rd-app-panel[data-mode="runs"][hidden])>.rd-app-panel[data-mode="milestones"] { grid-column:span 12; }
+.rd-app-grid.is-project>.rd-app-panel[data-mode="resources"] { order:5; }
+.rd-app-grid.is-project.has-paper>.rd-app-panel[data-mode="resources"] { grid-column:span 5; }
+.rd-app-grid.is-project.has-paper>.rd-app-panel[data-mode="milestones"] { display:none; }
+.rd-app-panel[hidden] { display:none!important; }
+.rd-native-dashboard :is(.block-language-dataviewjs,.dataview-error-box) { margin:0; }
+.rd-app-empty { max-width:560px; margin:10vh auto; padding:var(--rd-space); border-radius:var(--rd-radius); background:var(--rd-glass); }
+.rd-app-empty button { margin:12px 8px 0 0; }
+/* Sections flow on the page; their content aligns with the page edge. */
+.rd-app-panel .rd-dashboard .rd-module { padding:0; }
+
+/* ---------- Tiles ---------- */
+.rd-app-panel[data-mode="paper-progress"],
+.rd-dashboard :is(.rd-card,.rd-paper-map-section,.rd-paper-workbench,.rd-project-hero) {
+ background:var(--rd-glass); border:0; border-radius:var(--rd-radius); box-shadow:var(--rd-glass-shadow);
+}
+.rd-app-panel[data-mode="paper-progress"] .rd-dashboard .rd-module { padding:var(--rd-space); }
+
+/* ---------- Base ---------- */
+.rd-dashboard { interpolate-size:allow-keywords; container-type:inline-size; container-name:research-dashboard; width:100%; min-width:0; font:13px/1.5 var(--font-interface,var(--font-text)); overflow-wrap:anywhere; -webkit-font-smoothing:antialiased; }
+.rd-dashboard * { box-sizing:border-box; }
+.rd-dashboard .rd-module { min-width:0; padding:var(--rd-space); background:transparent; border-radius:var(--rd-radius); }
+.rd-dashboard :is(h1,h2,h3,h4,p) { margin:0; }
+.rd-dashboard :is(h1,.rd-page-title) { font:700 34px/1.08 var(--font-interface,var(--font-text)); letter-spacing:-.035em; }
+.rd-dashboard :is(h2,.rd-section-title) { font:650 20px/1.25 var(--font-interface,var(--font-text)); letter-spacing:-.022em; }
+.rd-dashboard h3 { font:600 14px/1.35 var(--font-interface,var(--font-text)); letter-spacing:-.01em; }
+.rd-dashboard :is(.rd-description,.rd-subtitle,.rd-caption,.rd-note) { color:var(--rd-muted); font-size:12px; line-height:1.5; }
+.rd-dashboard .rd-description { margin-top:6px; font-size:13px; }
+.rd-dashboard :is(.rd-caption,.rd-note) { margin-top:8px; }
+.rd-dashboard .rd-description:empty { display:none; }
+.rd-dashboard a { color:var(--rd-accent); text-decoration:underline; text-decoration-color:transparent; text-decoration-thickness:1px; text-underline-offset:3px; transition:color var(--rd-dur-fast) var(--rd-ease),text-decoration-color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard a:hover { text-decoration-color:color-mix(in srgb,currentColor 55%,transparent); }
+.rd-dashboard :is(a,button,input,select,summary):focus-visible { outline:2px solid var(--rd-accent); outline-offset:2px; }
+.rd-dashboard [hidden] { display:none!important; }
+.rd-dashboard :is(code,pre) { font-size:11px; }
+.rd-dashboard pre { overflow-x:auto; max-width:100%; }
+.rd-dashboard .rd-icon { width:17px; height:17px; flex:0 0 auto; stroke:currentColor; }
+
+/* ---------- Headers ---------- */
+.rd-dashboard :is(.rd-controls,.rd-toolbar,.rd-nav,.rd-header,.rd-project-heading,.rd-hero-meta,.rd-source-heading) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.rd-dashboard :is(.rd-overall-header,.rd-hero-header) { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px 24px; margin-bottom:28px; }
+.rd-dashboard .rd-module-header { display:flex; align-items:baseline; margin-bottom:14px; }
+/* Page section headers sit on the controls' 34px line, so neighbouring titles and their rules align. */
+.rd-dashboard .rd-module:not(.rd-paper-progress)>.rd-module-header { min-height:34px; align-items:center; }
+.rd-dashboard .rd-module-header .rd-header-copy { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 14px; width:100%; }
+.rd-dashboard .rd-module-header .rd-description { margin:0; font-size:12px; }
+.rd-dashboard .rd-header-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.rd-dashboard .rd-header-actions>.rd-controls { margin:0; }
+.rd-dashboard .rd-header-actions>.rd-caption { flex-basis:100%; margin:0; text-align:right; }
+.rd-dashboard .rd-live-state { order:-1; position:relative; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 8px; color:var(--rd-muted); font-size:12px; white-space:nowrap; }
+.rd-dashboard .rd-live-state::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--rd-faint); }
+.rd-dashboard .rd-live-state.is-running::before { background:var(--rd-ink); }
+.rd-dashboard :is(.rd-live-state.is-running,.rd-paper-status>.rd-status[data-state="active"])::after { content:""; position:absolute; left:8px; top:50%; width:7px; height:7px; margin-top:-3.5px; border-radius:50%; background:var(--rd-ink); pointer-events:none; animation:rd-ping 2.8s var(--rd-ease-out) infinite; }
+.rd-dashboard .rd-back-link { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px; border-radius:999px; color:var(--rd-muted); font-size:12.5px; transition:background-color var(--rd-dur-fast) var(--rd-ease),color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard .rd-back-link::before { content:"←"; }
+.rd-dashboard .rd-back-link:hover { color:var(--rd-text); background:var(--rd-chip); text-decoration:none; }
+
+/* ---------- Controls ---------- */
+.rd-dashboard :is(.rd-control,.rd-action,.rd-toolbar input,.rd-toolbar select,.rd-nav a) { min-height:34px; height:auto; max-width:100%; padding:6px 16px; border:0; border-radius:999px; color:var(--rd-text); background:var(--rd-chip); box-shadow:none; font:500 12.5px/1.4 var(--font-interface,var(--font-text)); transition:background-color var(--rd-dur-fast) var(--rd-ease),color var(--rd-dur-fast) var(--rd-ease),transform var(--rd-dur) var(--rd-spring); }
+.rd-dashboard :is(.rd-control,.rd-action,.rd-nav a) { display:inline-flex; justify-content:center; align-items:center; gap:6px; cursor:pointer; }
+.rd-dashboard :is(.rd-control,.rd-action,.rd-nav a):hover { background:var(--rd-chip-hover); text-decoration:none; }
+.rd-dashboard :is(.rd-control,.rd-action):active { transform:scale(.97); }
+.rd-dashboard .rd-control.mod-cta { background:var(--rd-ink); color:var(--rd-on-ink); }
+.rd-dashboard .rd-control.mod-cta:hover { background:var(--rd-text); }
+.rd-dashboard .rd-control:disabled { opacity:.45; cursor:default; transform:none; }
+.rd-dashboard .rd-control.mod-warning,.rd-dashboard .rd-remove-project { color:var(--text-error,var(--rd-bad)); }
+.rd-dashboard .rd-settings-menu { display:inline-block; position:relative; margin:0; font-size:12.5px; color:var(--rd-text); }
+.rd-dashboard .rd-settings-menu summary { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 14px; border-radius:999px; background:var(--rd-chip); list-style:none; cursor:pointer; font-weight:500; transition:background-color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard .rd-settings-menu summary::-webkit-details-marker { display:none; }
+.rd-dashboard .rd-settings-menu summary::after { content:""; width:5px; height:5px; margin-top:-3px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg); opacity:.7; transition:transform var(--rd-dur) var(--rd-spring); }
+.rd-dashboard .rd-settings-menu[open]>summary::after { transform:translateY(3px) rotate(-135deg); }
+.rd-dashboard .rd-settings-menu summary:hover { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-menu-items { position:absolute; top:calc(100% + 8px); right:0; min-width:196px; padding:6px; border-radius:16px; background:var(--rd-frost-bg); -webkit-backdrop-filter:var(--rd-frost-filter); backdrop-filter:var(--rd-frost-filter); box-shadow:0 0 0 1px var(--rd-line),0 24px 48px -18px rgb(0 0 0 / 45%); z-index:20; opacity:0; transform:translateY(-4px) scale(.97); transform-origin:top right; transition:opacity var(--rd-t-exit) var(--rd-c-move),transform var(--rd-t-exit) var(--rd-c-move); }
+.rd-dashboard .rd-settings-menu::details-content { transition:content-visibility var(--rd-t-exit) allow-discrete; }
+.rd-dashboard .rd-settings-menu[open] .rd-menu-items { opacity:1; transform:none; transition:opacity var(--rd-t-enter) var(--rd-c-enter),transform var(--rd-t-enter) var(--rd-c-enter); }
+@starting-style { .rd-dashboard .rd-settings-menu[open]:not(.is-restored) .rd-menu-items { opacity:0; transform:translateY(-4px) scale(.97); } }
+.rd-app-panel:has(.rd-settings-menu[open]) { position:relative; z-index:10; }
+.rd-dashboard .rd-menu-items>*,.rd-dashboard .rd-menu-items>.rd-control { display:flex; width:100%; min-height:0; padding:9px 12px; border:0; border-radius:10px; background:transparent; font-size:12.5px; text-align:left; justify-content:flex-start; color:var(--rd-text); }
+.rd-dashboard .rd-menu-items>.rd-remove-project { color:var(--text-error,var(--rd-bad)); }
+.rd-dashboard .rd-menu-items>:is(a,button):hover { background:var(--rd-chip-hover); text-decoration:none; }
+
+/* ---------- Status pills ---------- */
+.rd-dashboard .rd-status { --rd-state:var(--rd-muted); display:inline-flex; width:fit-content; max-width:100%; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; color:var(--rd-muted); background:var(--rd-chip); font-size:11px; font-weight:550; line-height:1.4; white-space:nowrap; }
+/* One grey family; tone carries severity: quiet → outlined → inverted. Labels always name the state. */
+.rd-dashboard .rd-status:is([data-state="active"],[data-state="running"]) { --rd-state:var(--rd-ink); color:var(--rd-text); background:var(--rd-chip-hover); }
+.rd-dashboard .rd-status:is([data-state="completed"],[data-state="fresh"],[data-state="done"]) { --rd-state:var(--rd-faint); color:var(--rd-muted); background:var(--rd-chip); }
+.rd-dashboard .rd-status:is([data-state="blocked"],[data-state="warning"],[data-state="stale"]) { --rd-state:var(--rd-text); color:var(--rd-text); background:transparent; box-shadow:inset 0 0 0 1px var(--rd-line-strong); }
+.rd-dashboard .rd-status:is([data-state="failed"],[data-state="error"]) { --rd-state:var(--rd-text); color:var(--rd-on-ink); background:var(--rd-ink); }
+
+/* ---------- Tile anatomy ---------- */
+.rd-dashboard .rd-card { display:flex; flex-direction:column; min-width:0; padding:var(--rd-space); }
+.rd-dashboard .rd-card-header { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:18px; }
+.rd-dashboard .rd-card-title { font:600 15px/1.3 var(--font-interface,var(--font-text)); letter-spacing:-.012em; }
+.rd-dashboard .rd-card-hint { color:var(--rd-muted); font-size:12px; white-space:nowrap; }
+.rd-dashboard .rd-empty { padding:20px 0 8px; color:var(--rd-muted); font-size:12.5px; }
+.rd-dashboard .rd-empty strong { display:block; color:var(--rd-text); font-size:14px; font-weight:600; }
+.rd-dashboard .rd-empty p { margin-top:6px; }
+
+/* ---------- Overall ---------- */
+.rd-dashboard .rd-overview-bento { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); grid-template-areas:"stats stats" "chart donut"; gap:var(--rd-flow) 0; }
+/* Headline figures sit on the page, split by hairlines. */
+.rd-dashboard .rd-kpi-strip { grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); min-width:0; }
+.rd-dashboard .rd-kpi { display:flex; flex-direction:column; gap:4px; min-width:0; padding:2px 24px; border-left:1px solid var(--rd-line); }
+.rd-dashboard .rd-kpi:first-child { padding-left:0; border-left:0; }
+.rd-dashboard .rd-kpi-value { font-size:34px; font-weight:650; line-height:1.05; letter-spacing:-.035em; }
+.rd-dashboard .rd-kpi-label { display:flex; align-items:center; gap:7px; color:var(--rd-muted); font-size:12.5px; }
+/* The two charts share one tile, divided by a hairline. */
+.rd-dashboard .rd-overview-bento>.rd-capsule-card { grid-area:chart; border-radius:var(--rd-radius) 0 0 var(--rd-radius); }
+.rd-dashboard .rd-overview-bento>.rd-donut-card { grid-area:donut; border-radius:0 var(--rd-radius) var(--rd-radius) 0; box-shadow:inset 1px 0 0 var(--rd-line); }
+
+/* Capsule columns: milestone progress per project. */
+.rd-dashboard .rd-capsule-chart { display:flex; align-items:stretch; gap:6px; flex:1; min-height:200px; overflow-x:auto; scrollbar-width:thin; }
+.rd-dashboard .rd-capsule { flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:10px; min-width:48px; height:auto; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; color:inherit; text-decoration:none; cursor:pointer; white-space:normal; }
+.rd-dashboard .rd-capsule:hover { background:transparent; text-decoration:none; }
+.rd-dashboard .rd-capsule-track { position:relative; display:block; flex:1; width:34px; min-height:130px; overflow:hidden; border-radius:999px; background:var(--rd-track); transition:background-color var(--rd-t-enter) var(--rd-c-move),box-shadow var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-capsule:hover .rd-capsule-track { background:var(--rd-chip-hover); box-shadow:0 0 0 3px var(--rd-chip); }
+.rd-dashboard .rd-capsule:hover .rd-capsule-track.is-unknown { box-shadow:inset 0 0 0 1px var(--rd-line-strong),0 0 0 3px var(--rd-chip); }
+.rd-dashboard .rd-capsule-fill { position:absolute; left:0; right:0; bottom:0; display:block; border-radius:999px; background:var(--rd-progress); transform-origin:bottom; }
+.rd-dashboard .rd-capsule-value { position:absolute; left:0; right:0; bottom:0; transform:translateY(-6px); color:var(--rd-text); font-size:11px; font-weight:600; line-height:1.2; text-align:center; font-variant-numeric:tabular-nums; pointer-events:none; }
+.rd-dashboard .rd-capsule-value.is-inside { transform:translateY(calc(100% + 9px)); color:var(--rd-on-progress); }
+.rd-dashboard .rd-capsule-track.is-unknown { background:transparent; box-shadow:inset 0 0 0 1px var(--rd-line-strong); }
+.rd-dashboard .rd-capsule-track.is-unknown .rd-capsule-value { transform:translateY(-10px); color:var(--rd-muted); }
+.rd-dashboard .rd-capsule-label { display:-webkit-box; width:100%; min-height:2.5em; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; color:var(--rd-muted); font-size:11.5px; line-height:1.25; text-align:center; overflow-wrap:normal; -webkit-hyphens:auto; hyphens:auto; transition:color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard .rd-capsule:hover .rd-capsule-label { color:var(--rd-text); }
+.rd-dashboard .rd-capsule:active .rd-capsule-track { box-shadow:0 0 0 3px var(--rd-chip-hover); }
+.rd-dashboard .rd-capsule:active .rd-capsule-track.is-unknown { box-shadow:inset 0 0 0 1px var(--rd-line-strong),0 0 0 3px var(--rd-chip-hover); }
+
+/* Donut: done / overdue arcs over the open-share track. */
+.rd-dashboard .rd-donut-body { display:grid; grid-template-columns:minmax(110px,150px) minmax(0,1fr); align-items:center; gap:24px; flex:1; }
+.rd-dashboard .rd-donut { position:relative; width:100%; aspect-ratio:1; }
+.rd-dashboard .rd-donut svg { display:block; width:100%; height:100%; }
+.rd-dashboard .rd-donut-track { stroke:var(--rd-track); }
+.rd-dashboard .rd-donut-done { stroke:var(--rd-progress); }
+.rd-dashboard .rd-donut-overdue { stroke:var(--rd-overdue); }
+.rd-dashboard .rd-donut-center { position:absolute; inset:0; display:grid; place-content:center; text-align:center; }
+.rd-dashboard .rd-donut-value { font-size:26px; font-weight:650; line-height:1.05; letter-spacing:-.03em; }
+.rd-dashboard .rd-donut-label { margin-top:4px; color:var(--rd-muted); font-size:11.5px; }
+.rd-dashboard .rd-donut-legend { display:grid; margin:0; padding:0; list-style:none; }
+.rd-dashboard .rd-donut-legend li { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-donut-legend li:last-child { border-bottom:0; }
+.rd-dashboard .rd-legend-label { display:flex; align-items:center; gap:8px; color:var(--rd-muted); font-size:12.5px; }
+.rd-dashboard .rd-legend-label::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--rd-track); box-shadow:inset 0 0 0 1px var(--rd-line-strong); }
+.rd-dashboard [data-series="done"] .rd-legend-label::before { background:var(--rd-progress); box-shadow:none; }
+.rd-dashboard [data-series="overdue"] .rd-legend-label::before { background:var(--rd-overdue); box-shadow:none; }
+/* Per-project completion: name and percentage, with a hairline bar of the same share beneath. */
+.rd-dashboard .rd-project-legend li[data-series="project"] { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:6px 12px; padding:9px 0 11px; }
+.rd-dashboard .rd-project-legend li[data-series="project"] .rd-legend-label { display:block; overflow:hidden; color:var(--rd-text); font-size:12.5px; white-space:nowrap; text-overflow:ellipsis; }
+.rd-dashboard .rd-project-legend li[data-series="project"] .rd-legend-label::before,.rd-dashboard .rd-project-legend li[data-series="more"] .rd-legend-label::before { content:none; }
+.rd-dashboard .rd-project-legend li[data-series="project"] .rd-legend-value { font-size:14px; }
+/* Ring-only card: the average sits centred in the tile. */
+.rd-dashboard .rd-donut-card .rd-donut-body { grid-template-columns:minmax(0,1fr); justify-items:center; align-content:center; gap:12px; }
+.rd-dashboard .rd-donut-card .rd-donut { width:min(100%,180px); }
+.rd-dashboard .rd-donut-note { margin:0; text-align:center; }
+.rd-dashboard .rd-legend-track { grid-column:1 / -1; display:block; height:3px; overflow:hidden; border-radius:999px; background:var(--rd-track); }
+.rd-dashboard .rd-legend-fill { display:block; height:100%; border-radius:inherit; background:var(--rd-progress); transform-origin:left; }
+.rd-dashboard .rd-project-legend li[data-series="more"] .rd-legend-label { color:var(--rd-faint); font-size:12px; }
+.rd-dashboard.is-entering .rd-legend-fill { animation:rd-grow-x var(--rd-t-data) var(--rd-c-enter) both; animation-delay:calc(var(--rd-delay,0s) + .08s); }
+.rd-dashboard .rd-legend-value { font-size:17px; font-weight:650; line-height:1.2; font-variant-numeric:tabular-nums; text-align:right; }
+
+/* ---------- Lists on the page ---------- */
+.rd-dashboard .rd-module.rd-projects { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:16px; }
+.rd-dashboard .rd-projects>.rd-module-header { grid-column:1; margin-bottom:14px; }
+.rd-dashboard .rd-projects>.rd-module-header .rd-header-copy { justify-content:flex-start; }
+.rd-dashboard .rd-projects>.rd-content { grid-column:1 / -1; }
+.rd-dashboard .rd-toolbar { grid-column:2; flex-wrap:nowrap; gap:6px; margin:0 0 14px; }
+.rd-dashboard .rd-toolbar input[type="search"] { width:180px; min-width:90px; padding-inline:16px; }
+.rd-dashboard .rd-toolbar select { min-width:0; padding-right:30px; }
+/* Type filter: its own line under the header, scrolling sideways rather than wrapping its pill on narrow panes. */
+.rd-dashboard .rd-projects>.rd-type-filter { grid-column:1 / -1; flex-wrap:nowrap; margin:0 0 14px; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:none; }
+.rd-dashboard .rd-projects>.rd-type-filter::-webkit-scrollbar { display:none; }
+.rd-dashboard .rd-type-tab { display:inline-flex; align-items:baseline; gap:6px; flex:0 0 auto; white-space:nowrap; }
+.rd-dashboard .rd-type-count { color:var(--rd-faint); font-size:11px; font-weight:500; font-variant-numeric:tabular-nums; transition:color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-type-tab:is(:hover,.is-selected) .rd-type-count { color:var(--rd-muted); }
+.rd-dashboard .rd-type-tab:active { transform:scale(.96); }
+.rd-dashboard :is(.rd-project-list,.rd-list,.rd-source-list,.rd-resources .rd-resource-list,.rd-task-container>ul,.rd-paper-task-list) { border-top:1px solid var(--rd-line); }
+.rd-dashboard .rd-project-row { display:grid; grid-template-columns:36px minmax(0,1fr) auto auto auto; align-items:center; gap:16px; position:relative; margin:0 -12px; padding:16px 12px; border-bottom:0; border-radius:14px; transition:background-color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-project-row::after { content:""; position:absolute; left:12px; right:12px; bottom:0; border-bottom:1px solid var(--rd-line); pointer-events:none; transition:border-color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-project-row:hover { background:var(--rd-chip); }
+.rd-dashboard .rd-project-row:is(:hover,:has(+.rd-project-row:hover))::after { border-bottom-color:transparent; }
+.rd-dashboard .rd-project-row:has(.rd-project-title a:active) { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-row-main { min-width:0; }
+.rd-dashboard .rd-row-heading { display:flex; align-items:center; gap:8px; min-width:0; }
+.rd-dashboard .rd-project-title { display:flex; align-items:center; gap:9px; font-size:14.5px; font-weight:600; }
+.rd-dashboard .rd-project-title a { position:relative; color:var(--rd-text); text-decoration:none; }
+/* Out of flow: the hover arrow never wraps a title onto a second line (one client rect keeps the title morph possible). */
+.rd-dashboard .rd-project-title a::after { content:"→"; position:absolute; left:100%; bottom:0; display:inline-block; margin-left:7px; white-space:nowrap; color:var(--rd-muted); opacity:0; transform:translateX(-6px); transition:opacity var(--rd-t-enter) var(--rd-c-move),transform var(--rd-t-enter) var(--rd-c-enter); }
+.rd-dashboard .rd-project-row:hover .rd-project-title a::after { opacity:1; transform:none; }
+.rd-dashboard .rd-project-row .rd-row-actions { opacity:0; transition:opacity var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-project-row:is(:hover,:focus-within) .rd-row-actions,.rd-dashboard .rd-row-actions:has(details[open]) { opacity:1; }
+.rd-dashboard .rd-row-next-action { display:-webkit-box; margin-top:2px; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; color:var(--rd-muted); font-size:13px; line-height:1.45; }
+.rd-dashboard .rd-row-next-action:empty { display:none; }
+.rd-dashboard .rd-row-meta { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin-top:6px; color:var(--rd-faint); font-size:11.5px; }
+.rd-dashboard .rd-row-meta .rd-source-summary { margin:0; gap:4px 12px; font-size:11.5px; color:var(--rd-faint); }
+.rd-dashboard .rd-row-meta .rd-status { gap:6px; padding:0; background:transparent!important; box-shadow:none!important; color:var(--rd-faint)!important; font-size:11.5px; font-weight:450; }
+.rd-dashboard .rd-row-meta .rd-status::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--rd-state); }
+.rd-dashboard .rd-row-progress { min-width:0; text-align:right; }
+.rd-dashboard .rd-row-progress .rd-milestone-progress { margin:0; }
+.rd-dashboard .rd-row-progress .rd-progress-summary { justify-content:flex-end; }
+.rd-dashboard .rd-row-progress .rd-progress-summary .rd-progress-label,
+.rd-dashboard .rd-row-progress .rd-milestone-bar { display:none; }
+.rd-dashboard .rd-row-progress>.rd-milestone-progress>.rd-progress-label { color:var(--rd-faint); font-size:11.5px; }
+.rd-dashboard .rd-row-status .rd-status { padding:5px 13px; font-size:11.5px; }
+.rd-dashboard .rd-row-actions:empty { display:none; }
+.rd-dashboard .rd-row-actions .rd-settings-menu summary { width:34px; padding:0; justify-content:center; font-size:0; background:transparent; }
+.rd-dashboard .rd-row-actions .rd-settings-menu summary:hover { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-row-actions .rd-settings-menu summary::after { margin:-4px 0 0; }
+.rd-dashboard .rd-ring { width:34px; height:34px; overflow:visible; }
+.rd-dashboard .rd-ring-track { stroke:var(--rd-track); stroke-width:3; }
+.rd-dashboard .rd-ring-value { stroke:var(--rd-progress); stroke-width:3; stroke-linecap:round; }
+.rd-dashboard .rd-ring.is-empty .rd-ring-track { stroke:var(--rd-line-strong); stroke-width:1.5; stroke-dasharray:2.4 3.2; }
+.rd-dashboard .rd-ring.is-complete .rd-ring-track { fill:color-mix(in srgb,var(--rd-progress) 18%,transparent); stroke:transparent; }
+.rd-dashboard .rd-ring-check { stroke:var(--rd-progress); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.rd-dashboard .rd-progress-summary { display:flex; align-items:baseline; gap:6px; color:var(--rd-muted); font-size:11.5px; }
+.rd-dashboard .rd-progress-count { color:var(--rd-text); font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-source-summary { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; color:var(--rd-muted); font-size:11.5px; }
+.rd-dashboard .rd-project-meta { display:flex; align-items:center; flex-wrap:wrap; gap:7px; color:var(--rd-muted); font-size:11.5px; }
+.rd-dashboard .rd-milestone-progress { margin-top:14px; }
+.rd-dashboard .rd-progress { display:block; width:100%; height:6px; border:0; border-radius:999px; overflow:hidden; margin:8px 0; background:var(--rd-track); accent-color:var(--rd-progress); }
+.rd-dashboard progress.rd-progress::-webkit-progress-bar { background:var(--rd-track); border-radius:999px; }
+.rd-dashboard progress.rd-progress::-webkit-progress-value { background:var(--rd-progress); border-radius:999px; }
+.rd-dashboard .rd-progress :is(span,.rd-progress-fill) { display:block; height:100%; background:var(--rd-progress); border-radius:inherit; }
+
+/* Project families: sub-projects hang beneath their parent on a hairline from its ring. The open family drops the
+ * parent's divider; the last child's divider runs full width and closes the group. Folding reuses the disclosure
+ * height/opacity transition; the chevron turns on the shared spring. */
+.rd-dashboard .rd-project-family { --rd-indent:32px; --rd-tree:var(--rd-line-strong); position:relative; }
+.rd-dashboard .rd-row-meta .rd-family-toggle { display:inline-flex; align-items:center; gap:6px; width:auto; height:auto; min-height:0; margin:-2px -8px; padding:2px 8px; border:0; border-radius:999px; background:transparent; box-shadow:none; color:var(--rd-muted); font:inherit; cursor:pointer; transition:background-color var(--rd-t-enter) var(--rd-c-move),color var(--rd-t-enter) var(--rd-c-move),transform var(--rd-t-move) var(--rd-spring); }
+.rd-dashboard .rd-family-toggle::after { content:""; width:5px; height:5px; margin:0 1px 0 0; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform var(--rd-dur) var(--rd-spring),margin var(--rd-dur) var(--rd-spring); }
+.rd-dashboard .rd-family-toggle[aria-expanded="true"]::after { margin:-3px 0 0; transform:rotate(45deg); }
+.rd-dashboard .rd-row-meta .rd-family-toggle:hover { background:var(--rd-chip-hover); color:var(--rd-text); }
+.rd-dashboard .rd-row-meta .rd-family-toggle:active { transform:scale(.96); }
+.rd-dashboard .rd-row-family { color:var(--rd-muted); }
+.rd-dashboard .rd-family-children>summary { display:none; }
+.rd-dashboard .rd-project-family.is-open>.rd-project-row::after { border-bottom-color:transparent; }
+.rd-dashboard .rd-family-stem { position:absolute; left:29px; top:calc(50% + 19px); bottom:0; border-left:1px solid var(--rd-tree); opacity:0; pointer-events:none; transition:opacity var(--rd-t-exit) var(--rd-c-move); }
+.rd-dashboard .rd-project-family.is-open .rd-family-stem { opacity:1; transition:opacity var(--rd-t-enter) var(--rd-c-enter) 60ms; }
+.rd-dashboard .rd-project-row.is-child { margin-left:calc(var(--rd-indent) - 12px); }
+.rd-dashboard .rd-project-row.is-child.is-last::after { left:calc(12px - var(--rd-indent)); }
+.rd-dashboard .rd-family-connector { position:absolute; top:0; bottom:0; left:calc(29px - var(--rd-indent)); width:calc(var(--rd-indent) - 22px); pointer-events:none; }
+.rd-dashboard .rd-family-connector::before { content:""; position:absolute; left:0; right:0; top:0; height:50%; border-left:1px solid var(--rd-tree); border-bottom:1px solid var(--rd-tree); border-bottom-left-radius:8px; }
+.rd-dashboard .rd-project-row.is-child:not(.is-last) .rd-family-connector::after { content:""; position:absolute; left:0; top:0; bottom:0; border-left:1px solid var(--rd-tree); }
+/* A parent shown only because a sub-project matches the filter: quiet context, still a working link. */
+.rd-dashboard .rd-project-row.is-context :is(.rd-ring,.rd-row-next-action,.rd-row-meta,.rd-row-progress,.rd-row-status) { opacity:.45; }
+.rd-dashboard .rd-project-row.is-context .rd-project-title a { color:var(--rd-muted); }
+.rd-dashboard .rd-project-row.is-context:hover :is(.rd-ring,.rd-row-next-action,.rd-row-meta,.rd-row-progress,.rd-row-status) { opacity:.75; }
+.rd-dashboard .rd-project-row :is(.rd-ring,.rd-row-next-action,.rd-row-meta,.rd-row-progress,.rd-row-status) { transition:opacity var(--rd-t-enter) var(--rd-c-move); }
+/* Grouping by drag (Overall, application list). Grey chrome only; teal stays for progress. The lifted row dims, a target
+ * row takes a calm inset ring with a small frosted hint, and a slim dashed zone at the end of the list (only while a
+ * sub-project is lifted) takes it out of its family. A quiet grip appears at the row's left edge on hover. */
+.rd-dashboard .rd-project-row.is-draggable { transition:background-color var(--rd-t-enter) var(--rd-c-move),box-shadow var(--rd-t-enter) var(--rd-c-move),opacity var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-drag-grip { position:absolute; left:2px; top:50%; width:6px; height:12px; margin-top:-6px; color:var(--rd-faint); background:radial-gradient(circle,currentColor 1px,transparent 1.25px) 0 0 / 3px 4px; opacity:0; cursor:grab; transition:opacity var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-project-row.is-draggable:hover>.rd-drag-grip { opacity:.8; }
+.rd-dashboard .rd-project-row.is-dragging { opacity:.5; }
+.rd-dashboard .rd-project-row.is-dragging>.rd-drag-grip,.rd-dashboard.is-grouping .rd-project-row:not(.is-dragging)>.rd-drag-grip { opacity:0; }
+.rd-dashboard .rd-project-row.is-drop-target { background:var(--rd-chip); box-shadow:inset 0 0 0 1.5px var(--rd-line-strong); }
+.rd-dashboard .rd-project-row.is-drop-target::after,.rd-dashboard .rd-project-row:has(+.rd-project-row.is-drop-target)::after { border-bottom-color:transparent; }
+.rd-dashboard .rd-drop-hint { position:absolute; bottom:0; left:60px; z-index:3; max-width:calc(100% - 72px); overflow:hidden; padding:5px 11px; border-radius:999px; background:var(--rd-frost-bg); -webkit-backdrop-filter:var(--rd-frost-filter); backdrop-filter:var(--rd-frost-filter); box-shadow:0 0 0 1px var(--rd-line),0 10px 24px -14px rgb(0 0 0 / 40%); color:var(--rd-text); font-size:12px; font-weight:500; line-height:1.3; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; translate:0 50%; transform-origin:0 50%; animation:rd-hint-in var(--rd-t-enter) var(--rd-c-enter) both; }
+@keyframes rd-hint-in { from { opacity:0; scale:.96; } }
+.rd-dashboard .rd-ungroup-zone { display:flex; align-items:center; justify-content:center; height:0; margin:0 -12px; overflow:hidden; border-radius:14px; outline:1.5px dashed transparent; outline-offset:-1.5px; color:var(--rd-muted); font-size:12.5px; font-weight:500; opacity:0; transition:height var(--rd-t-move) var(--rd-c-move),margin var(--rd-t-move) var(--rd-c-move),opacity var(--rd-t-exit) var(--rd-c-move),outline-color var(--rd-t-enter) var(--rd-c-move),background-color var(--rd-t-enter) var(--rd-c-move),color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-ungroup-zone.is-armed { height:44px; margin-top:10px; opacity:1; outline-color:var(--rd-line-strong); transition:height var(--rd-t-move) var(--rd-c-move),margin var(--rd-t-move) var(--rd-c-move),opacity var(--rd-t-enter) var(--rd-c-enter) 60ms,outline-color var(--rd-t-enter) var(--rd-c-move),background-color var(--rd-t-enter) var(--rd-c-move),color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard .rd-ungroup-zone.is-drop-target { background:var(--rd-chip); color:var(--rd-text); outline-color:color-mix(in srgb,var(--rd-text) 34%,transparent); }
+.rd-dashboard .rd-ungroup-label { overflow:hidden; padding:0 16px; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; }
+.rd-dashboard .rd-row-type { color:var(--rd-muted); }
+
+/* Sub-projects on a parent's page flow on the page like the Overall list. */
+.rd-dashboard .rd-subprojects { margin-top:var(--rd-flow); }
+.rd-dashboard .rd-subprojects-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 16px; min-height:34px; margin-bottom:14px; }
+.rd-dashboard .rd-subprojects-copy { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 14px; min-width:0; }
+.rd-dashboard .rd-subprojects-count { color:var(--rd-muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-subproject-list .rd-project-row { grid-template-columns:36px minmax(0,1fr) auto auto; }
+
+/* A sub-project's page: the parent sits quietly above the title. */
+.rd-dashboard .rd-project-breadcrumb { display:flex; align-items:center; gap:6px; margin:0 0 6px; color:var(--rd-faint); font-size:13px; font-weight:500; line-height:1.4; }
+.rd-dashboard .rd-project-breadcrumb a { color:var(--rd-muted); }
+.rd-dashboard .rd-project-breadcrumb a:hover { color:var(--rd-text); }
+.rd-dashboard .rd-crumb-separator { font-size:14px; }
+
+/* Alerts */
+.rd-dashboard :is(.rd-list,.rd-milestone-list,.rd-resource-list,.rd-health-list) { list-style:none; padding:0; margin:0; }
+.rd-dashboard :is(.rd-list,.rd-milestone-list,.rd-resource-list,.rd-health-list)>li { padding:14px 0; border-bottom:1px solid var(--rd-line); font-size:12.5px; }
+.rd-dashboard .rd-alert { display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; gap:14px; }
+.rd-dashboard .rd-alert-icon { width:34px; height:34px; padding:8px; border-radius:50%; color:var(--rd-text); background:var(--rd-chip-hover); }
+.rd-dashboard .rd-alert:is([data-state="failed"],[data-state="error"]) .rd-alert-icon { color:var(--rd-on-ink); background:var(--rd-ink); }
+.rd-dashboard .rd-alert-body { min-width:0; }
+.rd-dashboard .rd-alert-body .rd-caption { margin-top:2px; }
+.rd-dashboard a.rd-alert-title { color:var(--rd-text); font-size:13.5px; font-weight:600; }
+.rd-dashboard .rd-alert-parent { color:var(--rd-muted); font-size:13.5px; font-weight:500; }
+.rd-dashboard .rd-alert .rd-source-details { --rd-disc-top:6px; }
+/* Sub-project discovery suggestions: quiet (muted folder icon, neutral chip), actions under the text. */
+.rd-dashboard .rd-alert[data-state="suggestion"] .rd-alert-icon { color:var(--rd-muted); background:var(--rd-chip); }
+.rd-dashboard .rd-alert-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.rd-dashboard .rd-alert-actions .rd-control { min-height:26px; padding:3px 10px; font-size:11.5px; }
+/* Suggested folders: more than two under one parent fold into one row; the folded rows drop the icon and repeat no parent. */
+.rd-dashboard .rd-suggestion-list { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
+.rd-dashboard .rd-suggestion-item .rd-alert-title { font-size:13px; }
+.rd-dashboard .rd-suggestion-group .rd-caption { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Project hero (non-paper): one tile, divided by hairlines. */
+.rd-dashboard .rd-project-hero { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); grid-template-rows:auto 1fr; }
+.rd-dashboard .rd-hero-action { grid-row:1 / 3; margin:0; padding:var(--rd-space); }
+.rd-dashboard .rd-hero-action .rd-eyebrow { display:block; margin-bottom:10px; color:var(--rd-muted); font-size:12px; font-weight:500; }
+.rd-dashboard .rd-hero-action .rd-next-action { font-size:24px; font-weight:650; line-height:1.3; letter-spacing:-.025em; }
+.rd-dashboard .rd-hero-meta { gap:8px 14px; padding:var(--rd-space); box-shadow:inset 1px 0 0 var(--rd-line); color:var(--rd-muted); font-size:12.5px; }
+.rd-dashboard .rd-hero-progress { padding:var(--rd-space); box-shadow:inset 1px 0 0 var(--rd-line),inset 0 1px 0 var(--rd-line); }
+.rd-dashboard .rd-hero-progress .rd-milestone-progress { margin:0; }
+
+/* Live monitor and resources */
+.rd-dashboard .rd-source-card { padding:16px 0; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-source-heading { gap:8px; }
+.rd-dashboard .rd-source-heading h3 { margin-right:auto; }
+.rd-dashboard .rd-source-heading .rd-source-icon { width:34px; height:34px; margin-right:6px; padding:8px; border-radius:50%; background:var(--rd-chip); color:var(--rd-text); }
+.rd-dashboard .rd-source-card>:is(.rd-caption,.rd-action,progress,.rd-source-details) { margin-left:48px; }
+.rd-dashboard .rd-source-card>.rd-source-details { margin-left:calc(48px - var(--rd-disc-x)); }
+.rd-dashboard .rd-source-card>.rd-progress { width:calc(100% - 48px); }
+.rd-dashboard .rd-run-summary { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:2px 0 0 48px; color:var(--rd-muted); font-size:12px; }
+/* Named values from a declarative monitoring profile: compact value-over-label pairs on chip tone, no colour. */
+.rd-dashboard .rd-metrics { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0 48px; }
+.rd-dashboard .rd-metric { display:inline-flex; flex-direction:column; gap:1px; min-width:0; padding:6px 10px 5px; border-radius:var(--rd-radius-sm); background:var(--rd-chip); }
+.rd-dashboard .rd-metric-value { color:var(--rd-text); font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+.rd-dashboard .rd-metric-label { color:var(--rd-muted); font-size:11px; }
+.rd-dashboard .rd-extraction-list { margin:6px 0 4px; padding-left:16px; }
+.rd-dashboard .rd-extraction-list .rd-caption { margin-top:2px; }
+/* A disclosure bleeds by its own padding, and opening trades top margin for padding, so the summary never moves. */
+.rd-dashboard .rd-source-details { --rd-disc-x:14px; --rd-disc-y:12px; margin:var(--rd-disc-top,10px) calc(var(--rd-disc-x) * -1) 0; padding:0 var(--rd-disc-x); border-radius:var(--rd-radius-sm); font-size:12.5px; }
+.rd-dashboard .rd-source-details summary { display:inline-flex; align-items:center; gap:7px; cursor:pointer; color:var(--rd-muted); font-size:12px; list-style:none; transition:color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard .rd-source-details summary::-webkit-details-marker { display:none; }
+.rd-dashboard .rd-source-details summary::before { content:""; width:5px; height:5px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform var(--rd-dur) var(--rd-spring); }
+.rd-dashboard .rd-source-details[open]>summary::before { transform:rotate(45deg); }
+.rd-dashboard .rd-source-details summary:hover { color:var(--rd-text); }
+.rd-dashboard .rd-source-details[open] { margin-top:calc(var(--rd-disc-top,10px) - var(--rd-disc-y)); padding-block:var(--rd-disc-y); background:var(--rd-chip); }
+.rd-dashboard .rd-source-details[open]>summary { margin-bottom:8px; }
+.rd-dashboard details:not(.rd-settings-menu)::details-content { block-size:0; overflow:clip; opacity:0; transition:block-size var(--rd-t-move) var(--rd-c-move),opacity var(--rd-t-exit) var(--rd-c-move),content-visibility var(--rd-t-move) allow-discrete; }
+.rd-dashboard details:not(.rd-settings-menu)[open]::details-content { block-size:auto; opacity:1; transition:block-size var(--rd-t-move) var(--rd-c-move),opacity var(--rd-t-enter) var(--rd-c-enter) 60ms,content-visibility var(--rd-t-move) allow-discrete; }
+.rd-dashboard :is(.rd-source-details,.rd-paper-project-milestones) { transition:padding var(--rd-t-move) var(--rd-c-move),margin var(--rd-t-move) var(--rd-c-move),background-color var(--rd-t-move) var(--rd-c-move); }
+.rd-dashboard .rd-source-details .rd-action { margin:8px 6px 0 0; }
+.rd-dashboard .rd-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr)); gap:12px; margin-top:10px; }
+.rd-dashboard .rd-field { display:grid; gap:3px; min-width:0; }
+.rd-dashboard .rd-label { color:var(--rd-muted); font-size:11px; }
+.rd-dashboard .rd-value { color:var(--rd-text); font-size:12.5px; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-table-wrap { overflow-x:auto; margin-top:10px; max-width:100%; }
+.rd-dashboard .rd-table { width:100%; min-width:460px; border-collapse:collapse; font-size:11.5px; margin:0; }
+.rd-dashboard .rd-table :is(th,td) { text-align:left; vertical-align:top; padding:8px; border:0; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-table th { color:var(--rd-muted); font-weight:500; background:transparent; }
+.rd-dashboard .rd-table tbody tr { background:transparent; }
+.rd-dashboard .rd-resources .rd-resource-list>li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:2px 14px; }
+.rd-dashboard .rd-resources .rd-resource-list>li>:not(.rd-open-editor) { grid-column:1; }
+.rd-dashboard .rd-resources .rd-resource-list .rd-open-editor { grid-column:2; grid-row:1 / span 2; min-height:30px; padding:4px 13px; font-size:12px; text-decoration:none; }
+.rd-dashboard .rd-resources .rd-resource-list>li>:first-child { font-weight:550; }
+.rd-dashboard .rd-resources .rd-resource-list .rd-caption { margin-top:2px; font-size:11.5px; }
+.rd-dashboard .rd-resources .rd-resource-list .rd-action { width:fit-content; min-height:24px; padding:2px 10px; font-size:11px; }
+
+/* Milestones (Dataview task list) */
+.rd-dashboard .rd-milestones .rd-controls { margin:0 0 12px; }
+.rd-dashboard .rd-task-container { margin-top:10px; }
+.rd-dashboard .rd-task-container>h3 { margin-bottom:6px; }
+.rd-dashboard .rd-task-container ul { list-style:none; padding:0; margin:0; }
+.rd-dashboard .rd-task-container .task-list-item { padding:12px 0; border-bottom:1px solid var(--rd-line); font-size:13px; }
+.rd-dashboard .rd-task-container .task-list-item-checkbox { margin-right:10px; accent-color:var(--rd-ink); }
+.rd-dashboard .rd-task-container .task-list-item.is-checked { color:var(--rd-muted); }
+.rd-dashboard .rd-task-container a.tag[href="#milestone"] { display:none; }
+.rd-dashboard .rd-task-container .dataview.small-text { font-size:10px; color:var(--rd-muted); }
+
+/* ---------- Paper workspace ---------- */
+.rd-dashboard .rd-paper-workspace { margin-top:0; }
+.rd-dashboard .rd-paper-status { order:-1; display:flex; align-items:center; gap:8px; }
+.rd-dashboard .rd-paper-status>.rd-status { gap:7px; min-height:34px; padding:0 8px; background:transparent; color:var(--rd-muted); font-size:12px; font-weight:450; }
+.rd-dashboard .rd-paper-status>.rd-status::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--rd-state); }
+.rd-dashboard .rd-paper-status>.rd-status { position:relative; box-shadow:none; }
+.rd-dashboard .rd-paper-status>.rd-status[data-state="active"] { --rd-state:var(--rd-ink); }
+.rd-dashboard .rd-paper-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:14px; }
+.rd-dashboard .rd-paper-toolbar:empty { display:none; }
+.rd-dashboard .rd-paper-source-label { color:var(--rd-muted); font-size:11.5px; }
+.rd-dashboard .rd-paper-source-title { font-size:13px; font-weight:550; }
+.rd-dashboard .rd-paper-section-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+.rd-dashboard .rd-paper-section-heading h2,
+.rd-dashboard .rd-module.rd-paper-progress>.rd-module-header .rd-section-title { font:600 15px/1.3 var(--font-interface,var(--font-text)); letter-spacing:-.012em; }
+.rd-dashboard .rd-paper-section-heading .rd-control { min-height:30px; padding:4px 13px; font-size:12px; }
+.rd-dashboard .rd-paper-map-section { min-width:0; padding:var(--rd-space); }
+.rd-dashboard .rd-paper-map-viewport { overflow:auto; padding:0; border-radius:0; background:transparent; }
+.rd-dashboard .rd-paper-map { min-width:0; width:100%; }
+/* Overview: paper title, then a numbered stepper of top-level chapters. */
+.rd-dashboard .rd-paper-map:not(.is-focused) { display:block; padding:0; }
+.rd-dashboard .rd-paper-map-section:has(.rd-paper-map:not(.is-focused))>.rd-paper-section-heading { margin-bottom:8px; }
+.rd-dashboard .rd-paper-map:not(.is-focused) .rd-paper-root { display:block; margin:0 0 16px; color:var(--rd-muted); }
+.rd-dashboard .rd-paper-root strong { font-size:13px; font-weight:450; line-height:1.45; }
+.rd-dashboard .rd-paper-root-branches { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px 14px; counter-reset:rd-chapter; }
+.rd-dashboard .rd-paper-root-branches>.rd-paper-branch { display:block; }
+.rd-dashboard .rd-paper-root-branches .rd-paper-node { align-content:start; min-height:0; padding:14px 2px 2px; border:0; border-top:2px solid var(--rd-line-strong); border-radius:0; background:transparent; box-shadow:none; transition:border-color var(--rd-t-enter) var(--rd-c-move),transform var(--rd-t-move) var(--rd-spring); }
+.rd-dashboard .rd-paper-root-branches .rd-paper-node::before { counter-increment:rd-chapter; content:counter(rd-chapter,decimal-leading-zero); color:var(--rd-faint); font-size:11px; font-weight:500; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-paper-root-branches .rd-paper-node:hover { background:transparent; border-top-color:var(--rd-ink); }
+.rd-dashboard .rd-paper-root-branches .rd-paper-node-title { font-size:14px; transition:color var(--rd-dur-fast) var(--rd-ease); }
+.rd-dashboard .rd-paper-root-branches .rd-paper-change-marker { top:12px; right:2px; }
+/* Focused: the selected branch beside its workbench, in one tile. */
+.rd-dashboard .rd-paper-focus-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,1fr); align-items:stretch; }
+.rd-dashboard .rd-paper-focus-layout>.rd-paper-map-section { border-radius:var(--rd-radius) 0 0 var(--rd-radius); }
+.rd-dashboard .rd-paper-focus-layout>.rd-paper-workbench { border-radius:0 var(--rd-radius) var(--rd-radius) 0; box-shadow:inset 1px 0 0 var(--rd-line); }
+.rd-dashboard .rd-paper-map.is-focused { display:block; padding:2px 0; }
+.rd-dashboard .rd-paper-map.is-focused>.rd-paper-branch { grid-template-columns:170px minmax(160px,1fr); }
+.rd-dashboard .rd-paper-map.is-focused>.rd-paper-branch:not(:has(>.rd-paper-children)) { grid-template-columns:minmax(160px,1fr); }
+.rd-dashboard .rd-paper-branch { position:relative; display:grid; grid-template-columns:minmax(150px,210px) minmax(130px,1fr); align-items:center; gap:24px; }
+.rd-dashboard .rd-paper-branch:not(:has(>.rd-paper-children)) { grid-template-columns:minmax(0,1fr); }
+.rd-dashboard .rd-paper-node { position:relative; display:grid; justify-content:stretch; gap:6px; width:100%; height:auto; min-height:54px; padding:12px 14px; border:0; border-radius:var(--rd-radius-sm); background:var(--rd-chip); box-shadow:none; color:var(--rd-text); text-align:left; white-space:normal; cursor:pointer; transition:background-color var(--rd-t-enter) var(--rd-c-move),box-shadow var(--rd-t-enter) var(--rd-c-move),transform var(--rd-t-move) var(--rd-spring); }
+.rd-dashboard .rd-paper-node:hover { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-paper-node:active { transform:scale(.985); }
+.rd-dashboard .rd-paper-root-branches .rd-paper-node:active { transform:translateY(1px); }
+.rd-dashboard .rd-paper-stage-tab:active { transform:scale(.96); }
+/* Selected section: lifted fill plus an accent bar on the leading edge, matching the sidebar's active file. */
+.rd-dashboard .rd-paper-node[aria-pressed="true"] { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-paper-node-marker { position:absolute; left:0; top:11px; bottom:11px; width:3px; border-radius:999px; background:var(--interactive-accent); pointer-events:none; }
+.rd-dashboard .rd-paper-node.is-small .rd-paper-node-marker { top:9px; bottom:9px; }
+.rd-dashboard .rd-paper-node-title { font-size:13px; font-weight:600; line-height:1.35; }
+.rd-dashboard .rd-paper-node-meta { display:flex; flex-wrap:wrap; gap:5px 10px; color:var(--rd-muted); font-size:11.5px; font-weight:400; }
+.rd-dashboard .rd-paper-node.is-small { min-height:42px; padding:9px 12px; }
+.rd-dashboard .rd-paper-node.is-small .rd-paper-node-title { font-size:12.5px; font-weight:550; }
+.rd-dashboard .rd-paper-change-marker { position:absolute; right:10px; top:6px; color:var(--rd-ink); font-size:16px; line-height:1; }
+.rd-dashboard .rd-paper-children { position:relative; display:grid; gap:8px; }
+.rd-dashboard .rd-paper-children::before { content:""; position:absolute; top:0; bottom:0; left:-13px; border-left:1px solid var(--rd-line-strong); }
+.rd-dashboard .rd-paper-children>.rd-paper-branch::before { content:""; position:absolute; left:-13px; width:13px; top:21px; border-top:1px solid var(--rd-line-strong); }
+.rd-dashboard .rd-paper-branch:has(>.rd-paper-children)>.rd-paper-node::after { content:""; position:absolute; top:50%; left:100%; width:11px; border-top:1px solid var(--rd-line-strong); }
+.rd-dashboard .rd-paper-children .rd-paper-branch { grid-template-columns:minmax(130px,1fr); }
+.rd-dashboard .rd-paper-children .rd-paper-children { margin-left:16px; }
+/* Nested sections stack their children below, so the sideways connector would only overflow the pane. */
+.rd-dashboard .rd-paper-children .rd-paper-branch:has(>.rd-paper-children)>.rd-paper-node::after { display:none; }
+.rd-dashboard .rd-paper-workbench { min-width:0; padding:var(--rd-space); }
+.rd-dashboard .rd-paper-workbench-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:2px 0 20px; }
+.rd-dashboard .rd-paper-workbench-summary .rd-field { padding:0 18px; border-left:1px solid var(--rd-line); }
+.rd-dashboard .rd-paper-workbench-summary .rd-field:first-child { padding-left:0; border-left:0; }
+.rd-dashboard .rd-paper-workbench-summary .rd-value { font-size:22px; font-weight:650; letter-spacing:-.03em; }
+.rd-dashboard .rd-paper-workbench>.rd-controls { margin-top:14px; }
+/* Segmented controls: milestone stages here, project types on Overall. One language, one sliding thumb each. */
+.rd-dashboard :is(.rd-paper-stage-tabs,.rd-type-filter) { display:flex; flex-wrap:wrap; gap:2px; width:fit-content; max-width:100%; margin-bottom:8px; padding:3px; border-radius:999px; background:var(--rd-chip); }
+.rd-dashboard :is(.rd-paper-stage-tab,.rd-type-tab) { min-height:28px; height:auto; padding:4px 13px; border:0; border-radius:999px; background:transparent; box-shadow:none; color:var(--rd-muted); font-size:12px; font-weight:500; cursor:pointer; transition:background-color var(--rd-t-enter) var(--rd-c-move),color var(--rd-t-enter) var(--rd-c-move),transform var(--rd-t-move) var(--rd-spring); }
+.rd-dashboard :is(.rd-paper-stage-tab,.rd-type-tab):hover { color:var(--rd-text); background:transparent; }
+.rd-dashboard :is(.rd-paper-stage-tab,.rd-type-tab).is-selected { background:var(--background-primary); color:var(--rd-text); box-shadow:0 1px 3px rgb(0 0 0 / 14%); }
+/* Where anchor positioning exists, one thumb sits under the selected tab (and glides during a stage view transition). */
+.rd-dashboard .rd-paper-stage-tabs { position:relative; anchor-scope:--rd-stage; }
+.rd-dashboard .rd-type-filter { position:relative; anchor-scope:--rd-type; }
+.rd-dashboard :is(.rd-paper-stage-thumb,.rd-type-thumb) { display:none; }
+@supports (anchor-name:--rd-stage) {
+ .rd-dashboard :is(.rd-paper-stage-tab,.rd-type-tab) { position:relative; z-index:1; }
+ .rd-dashboard :is(.rd-paper-stage-tab,.rd-type-tab).is-selected { background:transparent; box-shadow:none; }
+ .rd-dashboard .rd-paper-stage-tab.is-selected { anchor-name:--rd-stage; }
+ .rd-dashboard .rd-type-tab.is-selected { anchor-name:--rd-type; }
+ .rd-dashboard :is(.rd-paper-stage-thumb,.rd-type-thumb) { display:block; position:absolute; inset:anchor(top) anchor(right) anchor(bottom) anchor(left); border-radius:999px; background:var(--background-primary); box-shadow:0 1px 3px rgb(0 0 0 / 14%); pointer-events:none; }
+ .rd-dashboard .rd-paper-stage-thumb { position-anchor:--rd-stage; }
+ .rd-dashboard .rd-type-thumb { position-anchor:--rd-type; }
+}
+.rd-dashboard .rd-paper-task { padding:13px 0; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-paper-task-label { display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.5; cursor:pointer; }
+.rd-dashboard .rd-paper-task-label input { flex:0 0 auto; margin:3px 0 0; accent-color:var(--rd-ink); }
+.rd-dashboard .rd-paper-task.is-accepted .rd-paper-task-label>span { color:var(--rd-muted); }
+.rd-dashboard .rd-paper-task-meta { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 0 24px; color:var(--rd-muted); font-size:11px; }
+.rd-dashboard .rd-paper-changed { color:var(--rd-text); font-size:11px; font-weight:550; }
+.rd-dashboard .rd-paper-workspace>.rd-source-details.rd-paper-project-milestones { --rd-disc-x:var(--rd-space); --rd-disc-y:14px; --rd-disc-top:calc(var(--rd-gap) + var(--rd-disc-y)); margin-inline:0; border-radius:var(--rd-radius); }
+.rd-dashboard .rd-paper-workspace>.rd-source-details.rd-paper-project-milestones[open] { padding-bottom:var(--rd-space); background:var(--rd-glass); }
+.rd-dashboard .rd-paper-project-milestones .rd-control { margin-top:12px; }
+.rd-dashboard .rd-paper-sync-warning { margin-bottom:14px; padding:11px 15px; border-radius:var(--rd-radius-sm); background:var(--rd-chip); box-shadow:inset 0 0 0 1px var(--rd-line-strong); color:var(--rd-text); font-size:12px; }
+.rd-dashboard .rd-paper-breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:-4px 0 14px; color:var(--rd-muted); font-size:12px; }
+.rd-dashboard .rd-paper-breadcrumb-link { height:auto; padding:0; border:0; background:transparent; box-shadow:none; color:var(--rd-text); font:inherit; text-decoration:underline; text-decoration-color:var(--rd-line-strong); text-underline-offset:3px; cursor:pointer; }
+
+/* ---------- Progress: one chapter table with two aligned halves ---------- */
+.rd-dashboard .rd-paper-progress-workspace { margin-top:0; }
+.rd-dashboard .rd-paper-chart-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); column-gap:36px; margin:0; }
+.rd-dashboard .rd-paper-chart { display:flex; flex-direction:column; min-width:0; }
+.rd-dashboard .rd-paper-chart .rd-paper-section-heading { flex-wrap:nowrap; min-height:22px; margin-bottom:0; }
+.rd-dashboard .rd-paper-chart h3 { font-size:13px; white-space:nowrap; }
+.rd-dashboard .rd-paper-chart>.rd-paper-section-heading+.rd-caption { height:18px; margin-top:2px; overflow:hidden; color:var(--rd-muted); font-size:12px; white-space:nowrap; text-overflow:ellipsis; }
+.rd-dashboard .rd-paper-chart .rd-empty { padding:22px 0 14px; }
+.rd-dashboard .rd-paper-chart .rd-empty strong { font-size:13.5px; }
+.rd-dashboard .rd-paper-chart>.rd-control { margin-top:4px; width:fit-content; }
+.rd-dashboard .rd-paper-tracking-range { margin-top:10px; font-size:11.5px; font-variant-numeric:tabular-nums; }
+.rd-dashboard :is(.rd-paper-progress-rows,.rd-paper-change-rows) { display:grid; margin:14px 0 0; border-top:1px solid var(--rd-line); }
+.rd-dashboard :is(.rd-paper-chart-row,.rd-paper-change-row) { position:relative; display:grid; align-items:center; gap:14px; height:48px; padding:0 6px; border:0; border-bottom:1px solid var(--rd-line); border-radius:0; background:transparent; box-shadow:none; color:var(--rd-text); text-align:left; white-space:normal; cursor:pointer; transition:background-color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard :is(.rd-paper-chart-row,.rd-paper-change-row):hover { background:var(--rd-chip); }
+.rd-dashboard :is(.rd-paper-chart-row,.rd-paper-change-row):active { background:var(--rd-chip-hover); }
+.rd-dashboard :is(.rd-paper-chart-row,.rd-paper-change-row):disabled { cursor:default; }
+.rd-dashboard .rd-paper-chart-row { grid-template-columns:minmax(0,1.15fr) minmax(48px,1fr) 42px; }
+.rd-dashboard .rd-paper-chart-label { display:-webkit-box; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:12.5px; font-weight:500; line-height:1.3; overflow-wrap:normal; -webkit-hyphens:auto; hyphens:auto; }
+.rd-dashboard .rd-paper-chart-value { color:var(--rd-text); font-size:12px; font-weight:550; text-align:right; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-paper-progress-track { position:relative; display:block; height:6px; overflow:hidden; border-radius:999px; background:var(--rd-track); }
+.rd-dashboard .rd-paper-progress-fill { display:block; height:100%; border-radius:inherit; background:var(--rd-progress); transform-origin:left; }
+.rd-dashboard .rd-paper-progress-track.is-unknown { height:6px; background:repeating-linear-gradient(90deg,var(--rd-line-strong) 0 3px,transparent 3px 7px); }
+.rd-dashboard .rd-paper-progress-track.is-unknown+.rd-paper-chart-value { color:var(--rd-faint); font-weight:400; }
+.rd-dashboard .rd-paper-change-row { grid-template-columns:120px minmax(0,1fr) 96px; }
+/* With progress rows on the left, the writing half reuses their chapter labels. */
+.rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-row { grid-template-columns:minmax(0,1fr) 96px; }
+.rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-row>.rd-paper-chart-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+/* Both tracks share one cell: the 7-day band underneath, today's slimmer bar on top. */
+.rd-dashboard .rd-paper-change-bars { display:grid; }
+.rd-dashboard .rd-paper-change-track { grid-area:1 / 1; position:relative; display:block; height:12px; }
+.rd-dashboard .rd-paper-change-track:first-child { z-index:1; }
+.rd-dashboard .rd-paper-change-zero { position:absolute; top:-4px; height:20px; width:1px; background:var(--rd-line-strong); }
+.rd-dashboard .rd-paper-change-fill { position:absolute; top:0; height:100%; border-radius:999px; }
+.rd-dashboard .rd-paper-change-fill.rd-paper-today { top:3px; height:6px; background:var(--rd-today); }
+.rd-dashboard .rd-paper-change-fill.rd-paper-week { background:var(--rd-week); }
+.rd-dashboard .rd-paper-change-values { display:flex; justify-content:flex-end; gap:10px; font-size:11.5px; text-align:right; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-paper-change-values>span { display:flex; align-items:center; justify-content:flex-end; gap:5px; }
+.rd-dashboard .rd-paper-change-values>.rd-paper-today { font-weight:600; }
+.rd-dashboard .rd-paper-change-values>span::before { content:""; width:5px; height:5px; border-radius:50%; background:var(--rd-swatch); }
+.rd-dashboard .rd-paper-change-values>.rd-paper-today { --rd-swatch:var(--rd-today); color:var(--rd-text); }
+.rd-dashboard .rd-paper-change-values>.rd-paper-week { --rd-swatch:var(--rd-week); color:var(--rd-muted); }
+.rd-dashboard .rd-paper-change-legend { display:flex; flex-wrap:nowrap; gap:12px; color:var(--rd-muted); font-size:11.5px; white-space:nowrap; }
+.rd-dashboard .rd-paper-change-legend>span { display:flex; gap:6px; align-items:center; }
+.rd-dashboard .rd-paper-change-legend>span::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--rd-swatch); }
+.rd-dashboard .rd-paper-change-legend>.rd-paper-today { --rd-swatch:var(--rd-today); }
+.rd-dashboard .rd-paper-change-legend>.rd-paper-week { --rd-swatch:var(--rd-week); }
+.rd-dashboard .rd-paper-change-axis { display:flex; justify-content:space-between; padding:6px calc(96px + 14px + 6px) 0 calc(6px + 120px + 14px); color:var(--rd-faint); font-size:10.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-axis { padding-left:6px; }
+.rd-dashboard .rd-paper-workspace>.rd-source-details { --rd-disc-top:18px; }
+
+/* ---------- Chart tooltip (one per view, top layer) ---------- */
+.rd-dashboard .rd-tooltip { position:fixed; inset:auto; left:0; top:0; max-width:min(280px,calc(100vw - 16px)); margin:0; padding:7px 11px 8px; border:0; border-radius:11px; overflow:visible; color:var(--rd-text); background:var(--rd-frost-bg); box-shadow:0 0 0 1px var(--rd-line),0 16px 36px -16px rgb(0 0 0 / 42%); -webkit-backdrop-filter:var(--rd-frost-filter); backdrop-filter:var(--rd-frost-filter); font:12px/1.4 var(--font-interface,var(--font-text)); pointer-events:none; opacity:0; transform:translateY(var(--rd-tip-rise)) scale(.98); transform-origin:50% 100%; transition:opacity var(--rd-t-exit) var(--rd-c-move),transform var(--rd-t-exit) var(--rd-c-move),overlay var(--rd-t-exit) allow-discrete,display var(--rd-t-exit) allow-discrete; }
+.rd-dashboard .rd-tooltip.is-below { transform:translateY(calc(var(--rd-tip-rise) * -1)) scale(.98); transform-origin:50% 0; }
+.rd-dashboard .rd-tooltip:popover-open { opacity:1; transform:none; transition:opacity var(--rd-t-enter) var(--rd-c-enter),transform var(--rd-t-enter) var(--rd-c-enter),overlay var(--rd-t-exit) allow-discrete,display var(--rd-t-exit) allow-discrete; }
+@starting-style { .rd-dashboard .rd-tooltip:popover-open { opacity:0; transform:translateY(var(--rd-tip-rise)) scale(.98); } .rd-dashboard .rd-tooltip.is-below:popover-open { transform:translateY(calc(var(--rd-tip-rise) * -1)) scale(.98); } }
+.rd-dashboard .rd-tooltip.is-gliding:popover-open { transition:opacity var(--rd-t-enter) var(--rd-c-enter),transform var(--rd-t-enter) var(--rd-c-enter),translate var(--rd-t-move) var(--rd-c-move),overlay var(--rd-t-exit) allow-discrete,display var(--rd-t-exit) allow-discrete; }
+.rd-dashboard .rd-tooltip-title { display:block; font-weight:600; letter-spacing:-.005em; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-tooltip-detail { display:block; margin-top:2px; color:var(--rd-muted); font-size:11px; font-variant-numeric:tabular-nums; text-wrap:pretty; }
+
+/* ---------- First-load placeholder ---------- */
+/* Appears only if loading outlasts 300ms, then breathes as one surface (every placeholder in phase, no sweeps). */
+.rd-dashboard .rd-skeleton,.rd-dashboard.is-loading .rd-hero-header .rd-page-title { animation:rd-fade var(--rd-t-enter) var(--rd-c-move) 300ms both,rd-breathe 1.4s ease-in-out 1s infinite alternate; }
+.rd-dashboard .rd-bone { display:block; height:10px; width:62%; border-radius:999px; background:var(--rd-track); }
+.rd-dashboard .rd-bone.is-short { width:28%; }
+.rd-dashboard .rd-bone.is-value { width:46px; height:30px; border-radius:9px; }
+.rd-dashboard .rd-bone.is-dot { flex:0 0 34px; width:34px; height:34px; }
+.rd-dashboard .rd-bone.is-pill { flex:0 0 auto; width:96px; height:34px; }
+.rd-dashboard .rd-bone.is-capsule { flex:1 1 0; width:auto; max-width:34px; height:150px; }
+.rd-dashboard .rd-bone.is-ring { flex:0 0 auto; width:min(130px,40%); height:auto; aspect-ratio:1; }
+.rd-dashboard .rd-bone.is-bar { width:100%; height:6px; }
+.rd-dashboard .rd-skeleton-actions { display:flex; gap:8px; }
+.rd-dashboard :is(.rd-skeleton-lines,.rd-skeleton-chart,.rd-skeleton-donut,.rd-skeleton-kpi) { display:grid; align-content:start; gap:12px; min-width:0; }
+.rd-dashboard .rd-skeleton-lines { flex:1; }
+.rd-dashboard .rd-skeleton-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:var(--rd-flow); }
+.rd-dashboard .rd-skeleton-kpi { padding:2px 24px; border-left:1px solid var(--rd-line); }
+.rd-dashboard .rd-skeleton-kpi:first-child { padding-left:0; border-left:0; }
+.rd-dashboard .rd-skeleton-tile { display:grid; gap:20px; padding:var(--rd-space); border-radius:var(--rd-radius); background:var(--rd-glass); }
+.rd-dashboard .rd-skeleton-overview .rd-skeleton-tile { grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:calc(var(--rd-space) * 2); }
+.rd-dashboard .rd-skeleton-capsules { display:flex; justify-content:space-around; gap:6px; padding-top:8px; }
+.rd-dashboard .rd-skeleton-donut-body { display:flex; align-items:center; gap:24px; }
+.rd-dashboard .rd-skeleton-steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px 14px; }
+.rd-dashboard .rd-skeleton-step { padding-top:16px; border-top:2px solid var(--rd-line); }
+.rd-dashboard .rd-skeleton-row { display:flex; align-items:center; gap:16px; padding:16px 0; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-skeleton-row:first-child { border-top:1px solid var(--rd-line); }
+.rd-dashboard .rd-skeleton-columns { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:36px; }
+.rd-dashboard .rd-skeleton-bar-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:14px; height:48px; border-bottom:1px solid var(--rd-line); }
+.rd-dashboard .rd-skeleton-bar-row .rd-bone.is-line { width:70%; }
+.rd-dashboard.is-loading .rd-hero-header .rd-page-title { width:fit-content; border-radius:12px; color:transparent; background:var(--rd-track); }
+@container research-dashboard (max-width:760px) {
+ .rd-dashboard :is(.rd-skeleton-overview .rd-skeleton-tile,.rd-skeleton-columns) { grid-template-columns:minmax(0,1fr); }
+ .rd-dashboard .rd-skeleton-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); row-gap:20px; }
+ .rd-dashboard .rd-skeleton-kpi:nth-child(3) { padding-left:0; border-left:0; }
+}
+
+/* ---------- Motion ---------- */
+@keyframes rd-rise { from { opacity:0; transform:translateY(var(--rd-rise,12px)); } to { opacity:1; transform:none; } }
+@keyframes rd-fade { from { opacity:0; } }
+@keyframes rd-breathe { to { opacity:.6; } }
+@keyframes rd-grow-x { from { transform:scaleX(0); } }
+@keyframes rd-grow-y { from { transform:scaleY(0); } }
+@keyframes rd-draw { from { stroke-dasharray:0 400; } }
+@keyframes rd-ping { 0% { opacity:.45; transform:scale(1); } 70%,100% { opacity:0; transform:scale(2.8); } }
+@media (hover:none) { .rd-dashboard .rd-project-row .rd-row-actions { opacity:1; } .rd-dashboard .rd-drag-grip { display:none; } }
+/* First open: one 520ms rise; panels 40ms apart, items 40ms apart (capped at 120ms); chart marks draw just behind
+ * their rows. Everything settles by ~800ms, before the view drops is-entering at 900ms. */
+.rd-app-panel:nth-child(2) { --rd-delay:.04s; } .rd-app-panel:nth-child(3) { --rd-delay:.08s; } .rd-app-panel:nth-child(4) { --rd-delay:.12s; } .rd-app-panel:nth-child(5) { --rd-delay:.16s; }
+.rd-dashboard.is-entering :is(.rd-module>header,.rd-module>.rd-toolbar,.rd-module>.rd-type-filter,.rd-kpi,.rd-overview-bento>.rd-card,.rd-paper-workspace>*,.rd-project-hero,.rd-project-row,.rd-list>li,.rd-source-card,.rd-resource-list>li,.rd-task-container,.rd-paper-chart-grid,.rd-paper-progress-workspace>.rd-source-details) { animation:rd-rise var(--rd-t-data) var(--rd-c-enter) both; animation-delay:var(--rd-delay,0s); }
+.rd-dashboard.is-entering .rd-kpi:nth-child(2),.rd-dashboard.is-entering .rd-project-row:nth-child(2),.rd-dashboard.is-entering .rd-list>li:nth-child(2),.rd-dashboard.is-entering .rd-overview-bento>.rd-donut-card { animation-delay:calc(var(--rd-delay,0s) + .04s); }
+.rd-dashboard.is-entering .rd-kpi:nth-child(3),.rd-dashboard.is-entering .rd-project-row:nth-child(3),.rd-dashboard.is-entering .rd-list>li:nth-child(3) { animation-delay:calc(var(--rd-delay,0s) + .08s); }
+.rd-dashboard.is-entering .rd-kpi:nth-child(4),.rd-dashboard.is-entering .rd-project-row:nth-child(n+4),.rd-dashboard.is-entering .rd-list>li:nth-child(n+4) { animation-delay:calc(var(--rd-delay,0s) + .12s); }
+.rd-dashboard.is-entering .rd-capsule-fill { animation:rd-grow-y var(--rd-t-data) var(--rd-c-move) both; animation-delay:calc(var(--rd-delay,0s) + .08s); }
+.rd-dashboard.is-entering .rd-capsule-value { animation:rd-fade 260ms var(--rd-c-move) both; animation-delay:calc(var(--rd-delay,0s) + .2s); }
+.rd-dashboard.is-entering .rd-paper-progress-fill { animation:rd-grow-x var(--rd-t-data) var(--rd-c-move) both; animation-delay:calc(var(--rd-delay,0s) + .08s); }
+.rd-dashboard.is-entering .rd-paper-change-fill { animation:rd-fade var(--rd-t-data) var(--rd-c-move) both; animation-delay:calc(var(--rd-delay,0s) + .08s); }
+.rd-dashboard.is-entering :is(.rd-donut-segment,.rd-ring-value) { animation:rd-draw var(--rd-t-data) var(--rd-c-move) both; animation-delay:calc(var(--rd-delay,0s) + .08s); }
+/* The placeholder was on screen: what replaces it fades in place (no empty frame, no second staggered entrance).
+ * Headers and controls that were already visible while loading stay put. */
+.rd-dashboard.is-revealing :is(.rd-module>.rd-content,.rd-header-actions,.rd-hero-header .rd-header-copy,.rd-overall-header .rd-description,.rd-module-header .rd-description) { animation:rd-fade var(--rd-t-enter) var(--rd-c-enter) both; }
+/* Value continuity: final values are inline; each keyframe starts from the --rd-from captured at the previous paint.
+ * These chart marks are absolutely placed or clipped by their track, so geometry changes stay local to the mark. */
+@keyframes rd-tween-height { from { height:var(--rd-from); } }
+@keyframes rd-tween-bottom { from { bottom:var(--rd-from); } }
+@keyframes rd-tween-width { from { width:var(--rd-from); } }
+@keyframes rd-tween-left { from { left:var(--rd-from); } }
+@keyframes rd-tween-span { from { left:var(--rd-from-left); width:var(--rd-from-width); } }
+@keyframes rd-tween-dash { from { stroke-dasharray:var(--rd-from); stroke-dashoffset:var(--rd-from-offset,0); } }
+.rd-dashboard .rd-capsule-fill.is-tweening { animation:rd-tween-height var(--rd-t-data) var(--rd-c-move) both; }
+.rd-dashboard .rd-capsule-value.is-tweening { animation:rd-tween-bottom var(--rd-t-data) var(--rd-c-move) both; }
+.rd-dashboard .rd-paper-progress-fill.is-tweening { animation:rd-tween-width var(--rd-t-data) var(--rd-c-move) both; }
+.rd-dashboard .rd-paper-change-fill.is-tweening { animation:rd-tween-span var(--rd-t-data) var(--rd-c-move) both; }
+.rd-dashboard .rd-paper-change-zero.is-tweening { animation:rd-tween-left var(--rd-t-data) var(--rd-c-move) both; }
+.rd-dashboard :is(.rd-ring-value,.rd-donut-segment).is-tweening { animation:rd-tween-dash var(--rd-t-data) var(--rd-c-move) both; }
+/* Changed figures roll in the direction of change; the leaving value is generated content, not text. */
+@keyframes rd-roll-in { from { opacity:0; transform:translateY(calc(var(--rd-roll-dir,1) * var(--rd-roll))); } }
+@keyframes rd-roll-out { to { opacity:0; transform:translateY(calc(var(--rd-roll-dir,1) * var(--rd-roll) * -1)); } }
+.rd-dashboard .is-rolling { position:relative; }
+.rd-dashboard .is-rolling.is-down { --rd-roll-dir:-1; }
+.rd-dashboard .is-rolling>.rd-roll-value { display:inline-block; animation:rd-roll-in var(--rd-t-enter) var(--rd-c-enter) both; }
+.rd-dashboard .is-rolling::after { content:attr(data-rd-from) / ""; position:absolute; inset:0; white-space:nowrap; pointer-events:none; animation:rd-roll-out var(--rd-t-exit) var(--rd-c-move) both; }
+/* Just updated: one soft neutral glow behind a row whose values changed in a data refresh. */
+@keyframes rd-glow { 0% { opacity:0; } 22% { opacity:1; } 100% { opacity:0; } }
+.rd-dashboard .is-updated { position:relative; isolation:isolate; }
+.rd-dashboard .is-updated::before { content:""; position:absolute; inset:var(--rd-glow-inset,0); z-index:-1; border-radius:var(--rd-glow-radius,inherit); background:var(--rd-chip); opacity:0; pointer-events:none; animation:rd-glow 1.6s var(--rd-ease) both; }
+.rd-dashboard .rd-capsule.is-updated { --rd-glow-inset:0 -3px; --rd-glow-radius:14px; }
+.rd-dashboard .rd-donut-legend li.is-updated { --rd-glow-inset:0 -8px; --rd-glow-radius:8px; }
+.rd-dashboard .rd-alert.is-updated { --rd-glow-inset:2px -10px; --rd-glow-radius:12px; }
+.rd-dashboard .rd-paper-workbench-summary .rd-field.is-updated { --rd-glow-inset:-6px 8px; --rd-glow-radius:10px; }
+.rd-dashboard .rd-paper-workbench-summary .rd-field.is-updated:first-child { --rd-glow-inset:-6px 8px -6px -8px; }
+/* Subtle: content fades in place at once, marks appear at their values, and nothing pulses or glows. */
+body.rd-motion-subtle .rd-app-panel { animation:none; }
+body.rd-motion-subtle .rd-dashboard .is-updated::before { animation:none; }
+body.rd-motion-subtle .rd-dashboard.is-entering :is(.rd-module>header,.rd-module>.rd-toolbar,.rd-module>.rd-type-filter,.rd-kpi,.rd-overview-bento>.rd-card,.rd-paper-workspace>*,.rd-project-hero,.rd-project-row,.rd-list>li,.rd-source-card,.rd-resource-list>li,.rd-task-container,.rd-paper-chart-grid,.rd-paper-progress-workspace>.rd-source-details) { animation:rd-fade var(--rd-t-enter) var(--rd-c-move) both; animation-delay:0s; }
+body.rd-motion-subtle .rd-dashboard.is-entering :is(.rd-capsule-fill,.rd-legend-fill,.rd-capsule-value,.rd-paper-progress-fill,.rd-paper-change-fill,.rd-donut-segment,.rd-ring-value) { animation:none; }
+body.rd-motion-subtle .rd-dashboard :is(.rd-live-state.is-running,.rd-paper-status>.rd-status[data-state="active"])::after { animation:none; }
+@media (prefers-reduced-motion:reduce) {
+ .rd-app-panel,.rd-dashboard *,.rd-dashboard *::before,.rd-dashboard *::after { animation:none!important; transition:none!important; }
+ .rd-native-dashboard { scroll-behavior:auto; }
+ .rd-dashboard .is-rolling::after { display:none; }
+}
+body.rd-motion-off .rd-app-panel,body.rd-motion-off .rd-dashboard *,body.rd-motion-off .rd-dashboard *::before,body.rd-motion-off .rd-dashboard *::after { animation:none!important; transition:none!important; }
+body.rd-motion-off .rd-native-dashboard { scroll-behavior:auto; }
+body.rd-motion-off .rd-dashboard .is-rolling::after { display:none; }
+
+/* ---------- In-page view transitions ---------- */
+/* Shared with the Connector: the root never cross-fades; only named parts move. Pseudo-elements inherit from html,
+ * so they use the :root motion steps. Image fades set their own curve rather than inheriting their group's. */
+html.rd-vt::view-transition-old(root), html.rd-vt::view-transition-new(root) { animation: none; }
+html.rd-vt::view-transition { pointer-events:none; }
+html.rd-vt { --rd-vt-shift:16px; }
+html.rd-vt:has(>body.rd-motion-subtle) { --rd-vt-shift:8px; }
+/* Geometry: every named part travels and resizes on one curve. */
+html.rd-vt::view-transition-group(*.rd-vt-chapter),html.rd-vt::view-transition-group(*.rd-vt-bench),html.rd-vt::view-transition-group(*.rd-vt-panel),html.rd-vt::view-transition-group(*.rd-vt-tail),html.rd-vt::view-transition-group(*.rd-vt-content),html.rd-vt::view-transition-group(*.rd-vt-tasks),html.rd-vt::view-transition-group(*.rd-vt-surface) { animation-duration:var(--rd-t-move); animation-timing-function:var(--rd-c-move); }
+/* The structure tile is drawn by its group box, so its surface stays solid while it resizes; only its text cross-fades. */
+html.rd-vt::view-transition-group(*.rd-vt-surface) { border-radius:var(--rd-vt-surface-radius,22px); background:var(--rd-vt-surface,transparent); }
+html.rd-vt::view-transition-image-pair(*.rd-vt-surface) { visibility:hidden; }
+/* The chosen chapter morphs above everything: its old label leaves almost at once and the new one follows. */
+html.rd-vt::view-transition-group(*.rd-vt-chapter) { z-index:2; }
+html.rd-vt::view-transition-group(*.rd-vt-marker) { z-index:3; animation-duration:var(--rd-t-move); animation-timing-function:var(--rd-c-move); }
+/* Stepping between sections: the workbench scrolls with the reading direction. */
+html.rd-vt.rd-vt-next::view-transition-old(*.rd-vt-bench) { animation:rd-vt-step-out var(--rd-t-enter) var(--rd-c-move) both; --rd-vt-step:calc(var(--rd-vt-shift) * -1); }
+html.rd-vt.rd-vt-next::view-transition-new(*.rd-vt-bench) { animation:rd-vt-step-in var(--rd-t-move) var(--rd-c-move) 40ms both; --rd-vt-step:var(--rd-vt-shift); }
+html.rd-vt.rd-vt-prev::view-transition-old(*.rd-vt-bench) { animation:rd-vt-step-out var(--rd-t-enter) var(--rd-c-move) both; --rd-vt-step:var(--rd-vt-shift); }
+html.rd-vt.rd-vt-prev::view-transition-new(*.rd-vt-bench) { animation:rd-vt-step-in var(--rd-t-move) var(--rd-c-move) 40ms both; --rd-vt-step:calc(var(--rd-vt-shift) * -1); }
+@keyframes rd-vt-step-out { to { opacity:0; transform:translateY(var(--rd-vt-step)); } }
+@keyframes rd-vt-step-in { from { opacity:0; transform:translateY(var(--rd-vt-step)); } }
+html.rd-vt::view-transition-old(*.rd-vt-chapter) { animation-duration:80ms; animation-timing-function:var(--rd-c-move); }
+html.rd-vt::view-transition-new(*.rd-vt-chapter) { animation-duration:var(--rd-t-enter); animation-delay:40ms; animation-timing-function:var(--rd-c-move); }
+/* Panels glide above the workspace; a translucent tile gets an opaque page backing, so nothing shows through it. */
+html.rd-vt::view-transition-group(*.rd-vt-panel) { z-index:1; }
+html.rd-vt::view-transition-group(*.rd-vt-tile) { border-radius:var(--rd-vt-tile-radius,22px); background:var(--rd-vt-backdrop,transparent); }
+/* Cross-fades exit first and enter just behind; content keeps its natural size and is revealed by its box, not scaled. */
+html.rd-vt::view-transition-old(*.rd-vt-content),html.rd-vt::view-transition-old(*.rd-vt-tasks) { animation-duration:var(--rd-t-exit); animation-timing-function:var(--rd-c-move); }
+html.rd-vt::view-transition-new(*.rd-vt-content),html.rd-vt::view-transition-new(*.rd-vt-tasks) { animation-duration:var(--rd-t-enter); animation-delay:60ms; animation-timing-function:var(--rd-c-move); }
+html.rd-vt::view-transition-old(*.rd-vt-content),html.rd-vt::view-transition-new(*.rd-vt-content) { height:100%; object-fit:none; object-position:left top; overflow:clip; }
+html.rd-vt::view-transition-old(*.rd-vt-panel),html.rd-vt::view-transition-new(*.rd-vt-panel),html.rd-vt::view-transition-old(*.rd-vt-tail),html.rd-vt::view-transition-new(*.rd-vt-tail),html.rd-vt::view-transition-old(*.rd-vt-bench),html.rd-vt::view-transition-new(*.rd-vt-bench) { animation-timing-function:var(--rd-c-move); }
+/* The workbench slides in just behind the chapter morph and leaves as a plain, quick fade. */
+html.rd-vt::view-transition-new(*.rd-vt-bench):only-child { animation:rd-vt-bench-in var(--rd-t-move) var(--rd-c-move) 40ms both; }
+/* Project list filtering: rows that stay glide to their new places; a leaving row fades out at once, an entering row
+ * fades in just behind it. Everything settles within the 320ms move step. */
+html.rd-vt::view-transition-group(*.rd-vt-row) { animation-duration:var(--rd-t-move); animation-timing-function:var(--rd-c-move); }
+html.rd-vt::view-transition-old(*.rd-vt-row):only-child { animation:rd-vt-bench-out var(--rd-t-exit) var(--rd-c-move) both; }
+html.rd-vt::view-transition-new(*.rd-vt-row):only-child { animation:rd-fade var(--rd-t-enter) var(--rd-c-enter) 60ms both; }
+html.rd-vt::view-transition-old(*.rd-vt-bench):only-child { animation:rd-vt-bench-out var(--rd-t-exit) var(--rd-c-move) both; }
+/* Stage tabs: the thumb is drawn by its group box, so its pill keeps true geometry while it glides; no overshoot. */
+html.rd-vt::view-transition-group(*.rd-vt-thumb),html.rd-vt::view-transition-group(*.rd-vt-tab) { animation-duration:260ms; animation-timing-function:var(--rd-c-move); }
+html.rd-vt::view-transition-group(*.rd-vt-thumb) { border-radius:999px; background:var(--rd-vt-thumb,transparent); box-shadow:0 1px 3px rgb(0 0 0 / 14%); }
+html.rd-vt::view-transition-image-pair(*.rd-vt-thumb) { visibility:hidden; }
+/* Subtle shortens in-page transitions to one fade-length beat; the Connector's page transitions keep their own timings. */
+html.rd-vt:not(.rd-vt-forward,.rd-vt-back):has(>body.rd-motion-subtle)::view-transition-group(*) { animation-duration:var(--rd-t-enter); }
+html.rd-vt:not(.rd-vt-forward,.rd-vt-back):has(>body.rd-motion-subtle)::view-transition-new(*.rd-vt-bench):only-child { animation-duration:var(--rd-t-enter); }
+@keyframes rd-vt-bench-in { from { opacity:0; transform:translateX(var(--rd-vt-shift)); } }
+@keyframes rd-vt-bench-out { to { opacity:0; } }
+
+/* ---------- Canvas and Markdown embeds ---------- */
+.research-dashboard-canvas .canvas-node:not(.canvas-node-group) .canvas-node-container { border-radius:var(--rd-radius); border-width:1px; box-shadow:0 4px 22px rgb(0 0 0 / 5%); }
+.research-dashboard-canvas .canvas-node:not(.canvas-node-group):not(.is-themed):not(.is-selected):not(.is-focused) .canvas-node-container { border-color:var(--rd-line); background:var(--background-primary); }
+.research-dashboard-canvas .canvas-node .markdown-preview-view { padding:0; font-family:var(--font-interface,var(--font-text)); }
+.research-dashboard-canvas .markdown-preview-sizer { min-width:0; max-width:none; margin:0; }
+.research-dashboard-canvas .rd-dashboard .rd-module { background:transparent; border-radius:0; }
+.research-dashboard-canvas .canvas-node:has(.rd-dashboard) .metadata-container,
+.research-dashboard-canvas .canvas-node:has(.rd-dashboard) .inline-title,
+.research-project-record .metadata-container,
+.markdown-preview-view:has(.rd-dashboard) .metadata-container { display:none; }
+.research-dashboard .markdown-embed:has(.rd-dashboard) { border:0; padding:0; }
+.research-dashboard .markdown-embed:has(.rd-dashboard) .markdown-embed-title { display:none; }
+
+/* ---------- Responsive ---------- */
+@container research-app (max-width:980px) {
+ /* Every panel is full width here; eleven 44px gaps alone would force a 484px minimum. */
+ .rd-app-grid { column-gap:0; }
+ .rd-app-grid:not(.is-project)>.rd-app-panel:is([data-mode="projects"],[data-mode="attention"]),
+ .rd-app-grid.is-project>.rd-app-panel:is([data-mode="runs"],[data-mode="milestones"]),
+ .rd-app-grid.is-project.has-paper>.rd-app-panel[data-mode="resources"] { grid-column:span 12; }
+}
+@container research-app (max-width:640px) {
+ .rd-app-grid { row-gap:24px; }
+}
+@container research-dashboard (max-width:820px) {
+ .rd-dashboard .rd-paper-focus-layout { grid-template-columns:minmax(0,1fr); }
+ .rd-dashboard .rd-paper-focus-layout>.rd-paper-map-section { border-radius:var(--rd-radius) var(--rd-radius) 0 0; }
+ .rd-dashboard .rd-paper-focus-layout>.rd-paper-workbench { border-radius:0 0 var(--rd-radius) var(--rd-radius); box-shadow:inset 0 1px 0 var(--rd-line); }
+}
+@container research-dashboard (max-width:760px) {
+ .rd-dashboard .rd-overview-bento { grid-template-columns:minmax(0,1fr); grid-template-areas:"stats" "chart" "donut"; row-gap:0; }
+ .rd-dashboard .rd-kpi-strip { margin-bottom:var(--rd-flow); }
+ .rd-dashboard .rd-overview-bento>.rd-capsule-card { border-radius:var(--rd-radius) var(--rd-radius) 0 0; }
+ .rd-dashboard .rd-overview-bento>.rd-donut-card { border-radius:0 0 var(--rd-radius) var(--rd-radius); box-shadow:inset 0 1px 0 var(--rd-line); }
+ .rd-dashboard .rd-paper-chart-grid { grid-template-columns:minmax(0,1fr); row-gap:30px; }
+ .rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-row { grid-template-columns:120px minmax(0,1fr) 96px; }
+ .rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-row>.rd-paper-chart-label { position:static; width:auto; height:auto; overflow:hidden; clip-path:none; white-space:normal; }
+ .rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-axis { padding-left:calc(6px + 120px + 14px); }
+ .rd-dashboard .rd-project-hero { grid-template-columns:minmax(0,1fr); }
+ .rd-dashboard .rd-hero-action { grid-row:auto; }
+ .rd-dashboard :is(.rd-hero-meta,.rd-hero-progress) { box-shadow:inset 0 1px 0 var(--rd-line); }
+ .rd-dashboard .rd-module.rd-projects { grid-template-columns:minmax(0,1fr); }
+ .rd-dashboard .rd-toolbar { grid-column:1; flex-wrap:wrap; }
+ .rd-dashboard .rd-toolbar input[type="search"] { flex:1 1 140px; width:auto; }
+}
+@container research-dashboard (max-width:560px) {
+ .rd-dashboard .rd-kpi-strip { grid-template-columns:repeat(2,minmax(0,1fr)); row-gap:20px; }
+ .rd-dashboard .rd-kpi:nth-child(3) { padding-left:0; border-left:0; }
+ .rd-dashboard .rd-kpi-value { font-size:28px; }
+ .rd-dashboard .rd-donut-body { grid-template-columns:minmax(100px,130px) minmax(0,1fr); gap:16px; }
+ .rd-dashboard .rd-project-row { grid-template-columns:34px minmax(0,1fr) auto; gap:6px 12px; }
+ .rd-dashboard .rd-project-row>.rd-ring { grid-row:1 / span 2; }
+ .rd-dashboard .rd-subproject-list .rd-project-row { grid-template-columns:34px minmax(0,1fr) auto; }
+ .rd-dashboard .rd-project-family { --rd-indent:28px; }
+ .rd-dashboard .rd-row-progress { grid-column:2; grid-row:2; text-align:left; }
+ .rd-dashboard .rd-row-progress .rd-progress-summary { justify-content:flex-start; }
+ .rd-dashboard .rd-row-status { grid-column:3; grid-row:1; }
+ .rd-dashboard .rd-row-actions { grid-column:3; grid-row:2; justify-self:end; }
+ .rd-dashboard .rd-drop-hint { left:50px; max-width:calc(100% - 62px); }
+ .rd-dashboard .rd-paper-workbench-summary .rd-field { padding:0 12px; }
+ .rd-dashboard .rd-paper-workbench-summary .rd-value { font-size:18px; }
+ .rd-dashboard .rd-paper-branch,.rd-dashboard .rd-paper-map.is-focused>.rd-paper-branch { grid-template-columns:minmax(0,1fr); gap:14px; }
+ .rd-dashboard .rd-paper-map.is-focused>.rd-paper-branch>.rd-paper-children { margin-left:16px; }
+ .rd-dashboard .rd-paper-map.is-focused>.rd-paper-branch>.rd-paper-node::after { display:none; }
+ .rd-dashboard .rd-run-summary,.rd-dashboard .rd-metrics,.rd-dashboard .rd-source-card>:is(.rd-caption,.rd-action,progress,.rd-source-details) { margin-left:0; }
+ .rd-dashboard .rd-source-card>.rd-progress { width:100%; }
+ .rd-dashboard .rd-source-card>.rd-source-details { margin-left:calc(var(--rd-disc-x) * -1); }
+}
+@container research-dashboard (max-width:420px) {
+ .rd-dashboard :is(h1,.rd-page-title) { font-size:28px; }
+ .rd-dashboard .rd-paper-change-row,.rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-row { grid-template-columns:76px minmax(0,1fr) 52px; gap:8px; }
+ .rd-dashboard .rd-paper-change-values { flex-direction:column; align-items:flex-end; gap:1px; font-size:11px; }
+ .rd-dashboard .rd-paper-chart-row { grid-template-columns:minmax(0,1.7fr) minmax(32px,1fr) 38px; gap:10px; }
+ .rd-dashboard .rd-paper-change-axis,.rd-dashboard .rd-paper-chart-grid:has(.rd-paper-chart-row) .rd-paper-change-axis { padding-left:calc(6px + 76px + 8px); padding-right:calc(52px + 8px + 6px); }
+ .rd-dashboard .rd-hero-action .rd-next-action { font-size:19px; }
+ .rd-dashboard .rd-donut-body { grid-template-columns:minmax(0,1fr); justify-items:center; }
+ .rd-dashboard .rd-donut { max-width:150px; }
+ .rd-dashboard .rd-donut-legend { width:100%; }
+}
+
+/* ---------- Mini dashboard (floating window, 300–420px) ----------
+ * One panel in mode "mini": widget tiles on the page backdrop, each a quiet label over one glanceable value or a short
+ * list. Same tokens as the page (glass tiles, teal progress, graphite writing, amber only on the overdue mark). */
+.rd-native-dashboard.rd-mini-host { padding:10px 12px 16px; scroll-behavior:auto; }
+.rd-mini-host>.rd-app-panel { border-radius:0; }
+.rd-dashboard .rd-module.rd-mini { --rd-mini-radius:calc(var(--rd-radius) * .72); display:grid; gap:8px; padding:0; }
+.rd-dashboard .rd-mini>.rd-content { display:grid; gap:8px; min-width:0; }
+.rd-dashboard .rd-mini-header { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:30px; padding:0 2px 0 4px; }
+.rd-dashboard .rd-mini-header .rd-header-copy { min-width:0; }
+.rd-dashboard .rd-mini-title { font:650 15px/1.2 var(--font-interface,var(--font-text)); letter-spacing:-.015em; }
+.rd-dashboard .rd-mini-header .rd-header-actions { flex-wrap:nowrap; gap:2px; }
+.rd-dashboard :is(.rd-mini-live,.rd-mini-icon,.rd-mini-row,.rd-mini-writing-lead,.rd-mini-more) { height:auto; min-height:0; margin:0; border:0; box-shadow:none; background:transparent; color:inherit; font:inherit; text-align:left; white-space:normal; cursor:pointer; transition:background-color var(--rd-t-enter) var(--rd-c-move),color var(--rd-t-enter) var(--rd-c-move); }
+.rd-dashboard :is(.rd-mini-live,.rd-mini-icon,.rd-mini-row,.rd-mini-writing-lead,.rd-mini-more):disabled { cursor:default; }
+.rd-dashboard :is(.rd-mini-live,.rd-mini-icon,.rd-mini-row,button.rd-mini-writing-lead,.rd-mini-more):hover:not(:disabled) { background:var(--rd-chip); }
+.rd-dashboard :is(.rd-mini-live,.rd-mini-icon,.rd-mini-row,button.rd-mini-writing-lead,.rd-mini-more):active:not(:disabled) { background:var(--rd-chip-hover); }
+.rd-dashboard .rd-mini-live { position:relative; display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px 0 9px; border-radius:999px; color:var(--rd-muted); font-size:11.5px; font-weight:500; line-height:1; white-space:nowrap; }
+.rd-dashboard .rd-mini-live::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--rd-faint); }
+.rd-dashboard .rd-mini-live.is-running { color:var(--rd-text); }
+.rd-dashboard .rd-mini-live.is-running::before { background:var(--rd-ink); }
+.rd-dashboard .rd-mini-live.is-running::after { content:""; position:absolute; left:9px; top:50%; width:6px; height:6px; margin-top:-3px; border-radius:50%; background:var(--rd-ink); pointer-events:none; animation:rd-ping 2.8s var(--rd-ease-out) infinite; }
+.rd-dashboard .rd-mini-live:disabled { opacity:.6; }
+.rd-dashboard .rd-mini-icon { display:inline-grid; place-items:center; width:26px; height:26px; padding:0; border-radius:8px; color:var(--rd-muted); }
+.rd-dashboard .rd-mini-icon.is-pressed { background:var(--rd-chip-hover); color:var(--rd-text); }
+.rd-dashboard .rd-mini-glyph { width:15px; height:15px; }
+/* Widget tiles. */
+.rd-dashboard .rd-mini-section { min-width:0; padding:12px 14px; border-radius:var(--rd-mini-radius); background:var(--rd-glass); box-shadow:var(--rd-glass-shadow); }
+.rd-dashboard .rd-mini-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.rd-dashboard .rd-mini-section-title { color:var(--rd-muted); font:600 11px/1.3 var(--font-interface,var(--font-text)); letter-spacing:.01em; }
+.rd-dashboard .rd-mini-section-aside { overflow:hidden; color:var(--rd-faint); font-size:11px; font-variant-numeric:tabular-nums; text-overflow:ellipsis; white-space:nowrap; }
+.rd-dashboard .rd-mini-empty { padding:4px 0 2px; color:var(--rd-muted); font-size:12px; }
+.rd-dashboard .rd-mini-message { margin:0; padding:0 4px; }
+/* Summary: average ring beside Active · Blocked · Alerts. */
+.rd-dashboard .rd-mini-summary { display:grid; grid-template-columns:64px minmax(0,1fr); align-items:center; gap:14px; }
+.rd-dashboard .rd-mini-ring { position:relative; width:64px; height:64px; }
+.rd-dashboard .rd-mini-ring svg { display:block; width:100%; height:100%; }
+.rd-dashboard .rd-mini-ring-center { position:absolute; inset:0; display:grid; place-items:center; }
+.rd-dashboard .rd-mini-ring-value { font-size:15px; font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-mini-summary-side { min-width:0; }
+.rd-dashboard .rd-mini-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.rd-dashboard .rd-mini-stat { display:flex; flex-direction:column; gap:1px; min-width:0; padding-left:10px; border-left:1px solid var(--rd-line); }
+.rd-dashboard .rd-mini-stat:first-child { padding-left:0; border-left:0; }
+.rd-dashboard .rd-mini-stat-value { font-size:20px; font-weight:650; line-height:1.1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-mini-stat.is-zero .rd-mini-stat-value { color:var(--rd-faint); }
+.rd-dashboard .rd-mini-stat-label { overflow:hidden; color:var(--rd-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.rd-dashboard .rd-mini-caption { margin-top:6px; overflow:hidden; color:var(--rd-faint); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+/* Rows: mark · title over meta · value. Hover tints the row; the whole row is the target. */
+.rd-dashboard .rd-mini-list { display:grid; margin:0 -8px; }
+.rd-dashboard .rd-mini-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; width:100%; min-height:36px; padding:5px 8px; border-radius:10px; color:var(--rd-text); }
+.rd-dashboard .rd-mini-row .rd-ring { width:22px; height:22px; }
+.rd-dashboard .rd-mini-row .rd-ring :is(.rd-ring-track,.rd-ring-value) { stroke-width:3.6; }
+.rd-dashboard .rd-mini-row-main { display:grid; min-width:0; }
+.rd-dashboard :is(.rd-mini-row-title,.rd-mini-row-meta) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rd-dashboard .rd-mini-row-title { font-size:12.5px; font-weight:550; line-height:1.3; }
+.rd-dashboard .rd-mini-row-meta { color:var(--rd-muted); font-size:11px; line-height:1.35; }
+.rd-dashboard .rd-mini-row-value { color:var(--rd-muted); font-size:12px; font-weight:550; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-mini-project.is-complete .rd-mini-row-title { color:var(--rd-muted); }
+.rd-dashboard .rd-mini-row.is-updated { --rd-glow-inset:0; --rd-glow-radius:10px; }
+.rd-dashboard .rd-mini-stat.is-updated { --rd-glow-inset:-4px -6px; --rd-glow-radius:8px; }
+/* Today: one large net figure in graphite, the week beside it; several papers list below. */
+.rd-dashboard .rd-mini-writing-lead { display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 8px; width:100%; padding:0; }
+.rd-dashboard button.rd-mini-writing-lead { width:calc(100% + 16px); margin:-4px -8px; padding:4px 8px; border-radius:10px; color:var(--rd-text); }
+.rd-dashboard .rd-mini-writing-value { color:var(--rd-writing); font-size:24px; font-weight:650; line-height:1.1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.rd-dashboard .rd-mini-writing-value.is-unknown { color:var(--rd-faint); }
+.rd-dashboard .rd-mini-writing-unit { color:var(--rd-muted); font-size:12px; }
+.rd-dashboard .rd-mini-writing-week { margin-left:auto; color:var(--rd-muted); font-size:11.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rd-dashboard .rd-mini-paper-list { margin-top:8px; padding-top:4px; border-top:1px solid var(--rd-line); }
+.rd-dashboard .rd-mini-paper { grid-template-columns:minmax(0,1fr) auto; }
+.rd-dashboard .rd-mini-paper-values { display:flex; gap:10px; font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rd-dashboard .rd-mini-paper-today { color:var(--rd-today); font-weight:600; }
+.rd-dashboard .rd-mini-paper-week { color:var(--rd-muted); }
+/* Next up: an open (not clickable) task mark; overdue rings it amber and weights the date. */
+.rd-dashboard .rd-mini-task-mark { width:14px; height:14px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--rd-line-strong); }
+.rd-dashboard .rd-mini-task.is-overdue .rd-mini-task-mark { box-shadow:inset 0 0 0 1.5px var(--rd-overdue); }
+.rd-dashboard .rd-mini-task-due { color:var(--rd-muted); font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rd-dashboard .rd-mini-task.is-overdue .rd-mini-task-due { color:var(--rd-text); font-weight:600; }
+/* Needs attention: the first alert, then a quiet link to the rest. */
+.rd-dashboard .rd-mini-alerts>.rd-mini-alert { width:calc(100% + 16px); margin:0 -8px; grid-template-columns:auto minmax(0,1fr); }
+.rd-dashboard .rd-mini-alert-icon { color:var(--rd-text); }
+.rd-dashboard .rd-mini-more { display:block; width:fit-content; margin:2px 0 0 auto; padding:3px 9px; border-radius:999px; color:var(--rd-muted); font-size:11.5px; font-weight:500; line-height:1.4; }
+.rd-dashboard .rd-mini-more:hover:not(:disabled) { color:var(--rd-text); }
+/* Placeholder and first-open motion: tiles rise in a short stagger; Subtle fades in place; Off and reduced motion are
+ * covered by the global rules above. */
+.rd-dashboard .rd-skeleton-mini { display:grid; gap:8px; }
+.rd-dashboard .rd-skeleton-mini .rd-skeleton-row { gap:12px; padding:12px 14px; border:0; border-radius:var(--rd-mini-radius); background:var(--rd-glass); }
+.rd-dashboard .rd-skeleton-mini .rd-bone.is-ring { width:56px; flex-basis:56px; }
+.rd-dashboard .rd-skeleton-mini .rd-bone.is-dot { flex-basis:22px; width:22px; height:22px; }
+.rd-dashboard.is-entering .rd-mini-section { animation:rd-rise var(--rd-t-data) var(--rd-c-enter) both; animation-delay:calc(var(--rd-delay,0s) + var(--rd-mini-step,0s)); }
+.rd-dashboard .rd-mini-section:nth-child(2) { --rd-mini-step:.04s; }
+.rd-dashboard .rd-mini-section:nth-child(3) { --rd-mini-step:.08s; }
+.rd-dashboard .rd-mini-section:nth-child(n+4) { --rd-mini-step:.12s; }
+body.rd-motion-subtle .rd-dashboard.is-entering .rd-mini-section { animation:rd-fade var(--rd-t-enter) var(--rd-c-move) both; animation-delay:0s; }
+body.rd-motion-subtle .rd-dashboard .rd-mini-live.is-running::after { animation:none; }
+@container research-dashboard (max-width:320px) {
+ .rd-dashboard .rd-mini-summary { grid-template-columns:54px minmax(0,1fr); gap:10px; }
+ .rd-dashboard .rd-mini-ring { width:54px; height:54px; }
+ .rd-dashboard .rd-mini-ring-value { font-size:13px; }
+ .rd-dashboard .rd-mini-stat { padding-left:8px; }
+ .rd-dashboard .rd-mini-stat-value { font-size:18px; }
+ .rd-dashboard .rd-mini-section { padding:10px 12px; }
+ .rd-dashboard .rd-mini-writing-week { margin-left:0; }
+}

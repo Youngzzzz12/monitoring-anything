@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "id": "isale-batch",
+  "title": "iSALE batch (metadata.json)",
+  "description": "An iSALE batch workflow whose cases write metadata.json with case_id, model_name and status. Extraction uses the existing iSALE metadata adapter.",
+  "projectType": "simulation",
+  "sourceKind": "isale",
+  "origin": {
+    "createdBy": "builtin",
+    "approvedAt": null,
+    "version": 1,
+    "builtin": true
+  },
+  "detect": {
+    "allOf": [
+      {
+        "contains": {
+          "glob": "**/metadata.json",
+          "regex": "\"case_id\"\\s*:",
+          "maxBytes": 65536
+        },
+        "description": "metadata.json records with case_id"
+      }
+    ],
+    "anyOf": [
+      {
+        "contains": {
+          "glob": "**/metadata.json",
+          "regex": "\"status\"\\s*:\\s*\"(?:prepared|running|completed|failed)\"",
+          "maxBytes": 65536
+        },
+        "description": "metadata.json records with a supported status"
+      }
+    ],
+    "noneOf": [],
+    "threshold": 0.7
+  },
+  "extract": {
+    "adapter": "isale"
+  },
+  "milestoneTemplate": "simulation-basic",
+  "subprojectRole": "standalone"
+}

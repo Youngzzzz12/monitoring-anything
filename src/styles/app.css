@@ -1,0 +1,372 @@
+/* App shell styles. research-dashboard.css (ported) is written against Obsidian theme variables; this file supplies
+ * them for light and dark (following the OS unless overridden in Settings) and styles the app's own chrome: dialogs,
+ * setting rows, notices, the welcome screen, the plan card and the floating widget frame. */
+
+:root {
+  --font-interface: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --font-text: var(--font-interface);
+  --font-small: 12.5px;
+  --font-monospace: "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  --background-primary: #ffffff;
+  --background-secondary: #f3f3f6;
+  --background-modifier-border: rgb(28 30 36 / 12%);
+  --text-normal: #1d1d22;
+  --text-muted: #63636e;
+  --text-faint: #9a9aa4;
+  --text-error: #c4282d;
+  /* Obsidian's default accent, as the plugin shows it (the chapter marker in the paper structure). */
+  --interactive-accent: #8a5cf5;
+}
+body.theme-dark {
+  --background-primary: #1c1c1f;
+  --background-secondary: #141416;
+  --background-modifier-border: rgb(255 255 255 / 12%);
+  --text-normal: #ececf0;
+  --text-muted: #a3a3ad;
+  --text-faint: #72727c;
+  --text-error: #ff6b6b;
+  --interactive-accent: #8a5cf5;
+}
+
+html, body { height: 100%; margin: 0; }
+body { background: var(--background-secondary); color: var(--text-normal); font: 13px/1.5 var(--font-interface); -webkit-font-smoothing: antialiased; overflow: hidden; }
+#app { height: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.rd-native-dashboard { box-sizing: border-box; }
+
+/* Plain controls outside the dashboard module (dialogs, welcome): the same pill language. */
+:is(.rd-modal, .rd-welcome, .rd-app-empty) :is(button, select, input[type="text"], input[type="search"], input[type="date"], input:not([type])) {
+  min-height: 32px; padding: 5px 14px; border: 0; border-radius: 999px; background: var(--rd-chip, rgb(28 30 36 / 6%)); color: var(--text-normal);
+  transition: background-color 160ms ease;
+}
+:is(.rd-modal, .rd-welcome, .rd-app-empty) :is(input[type="text"], input[type="date"], input:not([type]), select) { border-radius: 10px; box-shadow: inset 0 0 0 1px var(--background-modifier-border); background: var(--background-primary); }
+:is(.rd-modal, .rd-welcome, .rd-app-empty) button { cursor: pointer; font-weight: 500; }
+:is(.rd-modal, .rd-welcome, .rd-app-empty) button:hover:not(:disabled) { background: var(--rd-chip-hover, rgb(28 30 36 / 10%)); }
+:is(.rd-modal, .rd-welcome, .rd-app-empty) button.mod-cta { background: var(--text-normal); color: var(--background-primary); }
+:is(.rd-modal, .rd-welcome, .rd-app-empty) button.mod-cta:hover:not(:disabled) { opacity: .88; }
+:is(.rd-modal, .rd-welcome) button.mod-warning { background: var(--text-error); color: #fff; }
+:is(.rd-modal, .rd-welcome, .rd-app-empty) :disabled { opacity: .5; cursor: default; }
+:is(.rd-modal, .rd-welcome) :focus-visible { outline: 2px solid var(--text-normal); outline-offset: 2px; }
+
+/* ---------- Dialogs ---------- */
+.rd-modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px;
+  background: rgb(0 0 0 / 0%); transition: background-color 160ms ease;
+}
+.rd-modal-backdrop.is-open { background: rgb(0 0 0 / 28%); }
+.rd-modal {
+  --rd-chip: rgb(28 30 36 / 6%); --rd-chip-hover: rgb(28 30 36 / 10%);
+  position: relative; box-sizing: border-box; width: min(640px, 100%); max-height: calc(100vh - 48px); overflow: auto;
+  padding: 26px 28px 22px; border-radius: 20px; background: var(--background-primary);
+  box-shadow: 0 0 0 1px var(--background-modifier-border), 0 30px 70px -24px rgb(0 0 0 / 45%);
+  opacity: 0; transform: translateY(8px) scale(.985); transition: opacity 160ms ease, transform 200ms cubic-bezier(.16, 1, .3, 1);
+}
+body.theme-dark .rd-modal { --rd-chip: rgb(255 255 255 / 7%); --rd-chip-hover: rgb(255 255 255 / 11%); }
+.rd-modal-backdrop.is-open .rd-modal { opacity: 1; transform: none; }
+.rd-settings-modal { width: min(720px, 100%); }
+.rd-modal h2 { margin: 0 0 6px; font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
+.rd-modal-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; min-height: 0 !important; padding: 0 !important; background: transparent !important; color: var(--text-muted); }
+.rd-modal-close::before { content: "×"; font-size: 22px; line-height: 30px; }
+.rd-modal-close:hover { color: var(--text-normal); background: var(--rd-chip) !important; }
+.rd-connect-description, .rd-connect-progress { margin: 0 0 8px; color: var(--text-muted); font-size: var(--font-small); }
+.rd-connect-progress:empty, .rd-connect-error:empty { display: none; }
+.rd-connect-error { margin: 8px 0 10px; color: var(--text-error); font-size: var(--font-small); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rd-connect-source { margin: 12px 0; padding: 9px 12px; border-radius: 10px; background: var(--rd-chip); color: var(--text-muted); font-size: var(--font-small); overflow-wrap: anywhere; }
+.rd-connect-summary { margin: 6px 0 10px; padding-left: 20px; color: var(--text-muted); font-size: var(--font-small); }
+p.rd-connect-summary { padding-left: 0; }
+.rd-connect-warnings { color: var(--text-muted); font-size: var(--font-small); }
+.rd-connect-warnings summary, .rd-connect-advanced summary { cursor: pointer; padding: 8px 0; color: var(--text-muted); }
+.rd-connect-path { flex: 1 1 260px; min-width: 0; }
+.setting-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--background-modifier-border); }
+.setting-item-info { flex: 1 1 auto; min-width: 0; }
+.setting-item-name { font-weight: 550; }
+.setting-item-description { margin-top: 2px; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.setting-item-description:empty { display: none; }
+.setting-item-control { display: flex; flex: 0 1 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; max-width: 60%; }
+.setting-item-control input[type="text"], .setting-item-control input:not([type]) { width: min(26rem, 100%); }
+.rd-modal-buttons { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.rd-settings-heading { margin: 22px 0 4px; font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.rd-settings-status, .rd-settings-about { margin: 0 0 6px; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.rd-slider-value { min-width: 3em; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rd-switch { position: relative; display: inline-flex; width: 40px; height: 24px; cursor: pointer; }
+.rd-switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.rd-switch-track { width: 100%; height: 100%; border-radius: 999px; background: var(--rd-chip-hover); transition: background-color 160ms ease; }
+.rd-switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--background-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 25%); transition: transform 200ms cubic-bezier(.2, 0, 0, 1); }
+.rd-switch input:checked + .rd-switch-track { background: var(--text-normal); }
+.rd-switch input:checked + .rd-switch-track::after { transform: translateX(16px); }
+.rd-switch input:focus-visible + .rd-switch-track { outline: 2px solid var(--text-normal); outline-offset: 2px; }
+.rd-switch input:disabled + .rd-switch-track { opacity: .45; }
+
+.rd-import-report { margin-top: 8px; }
+.rd-caption { color: var(--text-muted); font-size: 12px; }
+
+/* ---------- Notices ---------- */
+.rd-notices { position: fixed; right: 18px; bottom: 18px; z-index: 200; display: grid; gap: 8px; max-width: min(420px, calc(100vw - 36px)); }
+.rd-notice {
+  padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere;
+  color: var(--text-normal); background: color-mix(in srgb, var(--background-primary) 90%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 0 0 1px var(--background-modifier-border), 0 16px 36px -18px rgb(0 0 0 / 45%);
+  animation: rd-notice-in 200ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.rd-notice.is-error { box-shadow: inset 3px 0 0 var(--text-error), 0 0 0 1px var(--background-modifier-border), 0 16px 36px -18px rgb(0 0 0 / 45%); }
+.rd-notice.is-leaving { opacity: 0; transition: opacity 180ms ease; }
+.rd-notice-action { margin-left: 12px; padding: 2px 10px; border: 0; border-radius: 999px; background: var(--rd-chip, rgb(28 30 36 / 8%)); color: var(--text-normal); font: inherit; font-weight: 600; cursor: pointer; }
+.rd-notice-action:hover { background: var(--rd-chip-hover, rgb(28 30 36 / 12%)); }
+@keyframes rd-notice-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------- Welcome ---------- */
+.rd-welcome { max-width: 600px; padding: 34px 36px; }
+.rd-welcome h1 { margin: 0 0 10px; font-size: 30px; font-weight: 700; letter-spacing: -.03em; }
+.rd-welcome p { color: var(--text-muted); }
+.rd-welcome h3 { margin: 22px 0 6px; font-size: 13px; color: var(--text-muted); }
+.rd-welcome-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 6px; }
+.rd-welcome-recent { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.rd-welcome-recent button { width: 100%; text-align: left; border-radius: 10px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Floating widget ---------- */
+body.rd-widget-window, body.rd-widget-window #app { background: transparent; }
+.rd-widget-frame {
+  position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px;
+  background: var(--background-secondary); box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+}
+.rd-widget-frame > .rd-native-dashboard { flex: 1; min-height: 0; padding-top: 0; border-radius: 0 0 16px 16px; }
+.rd-widget-grip { position: relative; flex: 0 0 18px; display: flex; align-items: center; justify-content: center; cursor: grab; }
+.rd-widget-grip-bar { width: 36px; height: 4px; border-radius: 999px; background: var(--rd-line-strong, rgb(28 30 36 / 20%)); opacity: .7; }
+.rd-widget-close { position: absolute; top: 2px; right: 6px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-faint); cursor: pointer; line-height: 1; font-size: 13px; }
+.rd-widget-close::before { content: "×"; }
+.rd-widget-close:hover { background: var(--rd-chip-hover, rgb(28 30 36 / 10%)); color: var(--text-normal); }
+body.rd-widget-window .rd-app-empty { margin: 24px 16px; }
+.setting-item-info { flex-basis: 45%; }
+.setting-item-control select { max-width: min(22rem, 100%); text-overflow: ellipsis; }
+
+/* ---------- Grouping drag (pointer-driven; see view.ts) ----------
+ * The lifted row's title follows the pointer as a frosted pill; text selection is off while grouping. */
+.rd-dashboard.is-grouping, .rd-dashboard.is-grouping * { cursor: grabbing !important; user-select: none; }
+.rd-dashboard .rd-drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 60; max-width: 260px; overflow: hidden; padding: 5px 12px; border-radius: 999px;
+  background: var(--rd-frost-bg, color-mix(in srgb, var(--background-primary) 86%, transparent));
+  -webkit-backdrop-filter: var(--rd-frost-filter, blur(20px) saturate(160%)); backdrop-filter: var(--rd-frost-filter, blur(20px) saturate(160%));
+  box-shadow: 0 0 0 1px var(--rd-line, rgb(28 30 36 / 9%)), 0 12px 28px -14px rgb(0 0 0 / 45%);
+  color: var(--rd-text, var(--text-normal)); font-size: 12px; font-weight: 550; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap;
+  pointer-events: none; will-change: transform;
+  animation: rd-ghost-in var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) both;
+}
+@keyframes rd-ghost-in { from { opacity: 0; scale: .96; } }
+body.rd-motion-off .rd-dashboard .rd-drag-ghost { animation: none; }
+@media (prefers-reduced-motion: reduce) { .rd-dashboard .rd-drag-ghost { animation: none; } }
+
+/* ---------- Widget idle and wake ----------
+ * Apple-like: resting recedes slowly (fade, a little less colour, settling back to 96%); waking grows back to full size
+ * on a soft spring (damping 0.8, response 0.6 s: about 0.8 s with a 1.5% overshoot) while the opacity returns on a
+ * gentle ease-out and the sections rise one after another. */
+:root { --rd-widget-spring: linear(0, 0.045, 0.149, 0.281, 0.419, 0.548, 0.662, 0.757, 0.833, 0.893, 0.936, 0.968, 0.989, 1.002, 1.01, 1.014, 1.015, 1.015, 1.013, 1.011, 1.009, 1.007, 1.005, 1.004, 1.003, 1.002, 1); --rd-widget-ease: cubic-bezier(.4, 0, .2, 1); }
+.rd-widget-frame {
+  transform-origin: 50% 40%;
+  transition: opacity 480ms cubic-bezier(.25, .1, .25, 1), filter 480ms cubic-bezier(.25, .1, .25, 1), scale 820ms var(--rd-widget-spring);
+}
+.rd-widget-frame.is-idle {
+  opacity: var(--rd-idle-opacity, .55); filter: saturate(.75); scale: .96;
+  transition: opacity 1000ms var(--rd-widget-ease), filter 1000ms var(--rd-widget-ease), scale 1100ms var(--rd-widget-ease);
+}
+.rd-widget-frame.is-waking :is(.rd-mini-section, .rd-mini-header) { animation: rd-widget-rise 700ms var(--rd-widget-spring) both; }
+.rd-widget-frame.is-waking .rd-mini-section:nth-of-type(1) { animation-delay: 50ms; }
+.rd-widget-frame.is-waking .rd-mini-section:nth-of-type(2) { animation-delay: 100ms; }
+.rd-widget-frame.is-waking .rd-mini-section:nth-of-type(3) { animation-delay: 150ms; }
+.rd-widget-frame.is-waking .rd-mini-section:nth-of-type(4) { animation-delay: 200ms; }
+.rd-widget-frame.is-waking .rd-mini-section:nth-of-type(n+5) { animation-delay: 250ms; }
+@keyframes rd-widget-rise { from { translate: 0 6px; opacity: .6; } }
+/* Subtle: fade only, no size change or rise. Off and Reduce motion: switch at once. */
+body.rd-motion-subtle .rd-widget-frame.is-idle { scale: none; }
+body.rd-motion-subtle .rd-widget-frame.is-waking :is(.rd-mini-section, .rd-mini-header) { animation: none; }
+body.rd-motion-off .rd-widget-frame, body.rd-motion-off .rd-widget-frame.is-idle { transition: none; }
+body.rd-motion-off .rd-widget-frame.is-waking :is(.rd-mini-section, .rd-mini-header) { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rd-widget-frame, .rd-widget-frame.is-idle { transition: none; }
+  .rd-widget-frame.is-idle { scale: none; }
+  .rd-widget-frame.is-waking :is(.rd-mini-section, .rd-mini-header) { animation: none; }
+}
+
+/* ---------- Widget: complete and add milestones ----------
+ * Next up rows: a check ring (completes) beside the row's open button (navigates). Completing fills the ring in ink,
+ * draws the check, then the row eases out before the list refreshes. */
+.rd-dashboard .rd-mini-row.rd-mini-task { grid-template-columns: auto minmax(0, 1fr); gap: 6px; padding: 2px 4px 2px 6px; cursor: default; }
+.rd-dashboard .rd-mini-task-open { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; min-height: 32px; margin: 0; padding: 3px 4px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.rd-dashboard .rd-mini-check {
+  position: relative; display: grid; place-items: center; width: 22px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--rd-text); cursor: pointer; transition: background-color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-dashboard .rd-mini-check::before {
+  content: ""; position: absolute; inset: 4px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--rd-line-strong, rgb(28 30 36 / 22%));
+  transition: box-shadow var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), background-color var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)), transform 260ms cubic-bezier(.16, 1.4, .3, 1);
+}
+.rd-dashboard .rd-mini-task.is-overdue .rd-mini-check::before { box-shadow: inset 0 0 0 1.5px var(--rd-overdue, #b7791f); }
+.rd-dashboard .rd-mini-check svg { position: relative; width: 14px; height: 14px; fill: none; stroke: var(--rd-on-ink, var(--background-primary)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 14; stroke-dashoffset: 14; }
+.rd-dashboard .rd-mini-check:hover:not(:disabled)::before { box-shadow: inset 0 0 0 1.5px var(--rd-text); }
+.rd-dashboard .rd-mini-check:hover:not(:disabled) svg { stroke: var(--rd-muted); stroke-dashoffset: 0; transition: stroke-dashoffset 200ms ease; }
+.rd-dashboard .rd-mini-check:active:not(:disabled)::before { transform: scale(.86); }
+.rd-dashboard .rd-mini-check:disabled { cursor: default; opacity: .45; }
+.rd-dashboard .rd-mini-check:focus-visible { outline: 2px solid var(--rd-text); outline-offset: 1px; }
+.rd-dashboard .rd-mini-task.is-completing .rd-mini-check { opacity: 1; }
+.rd-dashboard .rd-mini-task.is-completing .rd-mini-check::before { background: var(--rd-ink, var(--text-normal)); box-shadow: none; transform: scale(1.08); }
+.rd-dashboard .rd-mini-task.is-completing .rd-mini-check svg { stroke: var(--rd-on-ink, var(--background-primary)); stroke-dashoffset: 0; transition: stroke-dashoffset 220ms 60ms cubic-bezier(.4, 0, .2, 1); }
+.rd-dashboard .rd-mini-task.is-completing .rd-mini-row-title { color: var(--rd-muted); text-decoration: line-through; text-decoration-color: var(--rd-faint); }
+.rd-dashboard .rd-mini-task.is-completing { animation: rd-mini-done 420ms cubic-bezier(.4, 0, .2, 1) 160ms both; }
+@keyframes rd-mini-done { to { opacity: 0; transform: translateX(6px); } }
+
+/* Quick add: a + in the Next up heading opens one line (project, title). */
+.rd-dashboard .rd-mini-next .rd-mini-section-head { align-items: center; }
+.rd-dashboard .rd-mini-add-toggle { width: 22px; height: 22px; margin: -4px -6px -4px auto; border-radius: 7px; }
+.rd-dashboard .rd-mini-add-toggle .rd-mini-glyph { width: 13px; height: 13px; transition: transform 260ms cubic-bezier(.16, 1, .3, 1); }
+.rd-dashboard .rd-mini-add-toggle.is-pressed .rd-mini-glyph { transform: rotate(45deg); }
+.rd-dashboard .rd-mini-add { display: grid; gap: 6px; margin: 4px 0 8px; animation: rd-mini-add-in 260ms cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes rd-mini-add-in { from { opacity: 0; transform: translateY(-4px); } }
+.rd-dashboard .rd-mini-add :is(select, input) {
+  box-sizing: border-box; width: 100%; min-height: 30px; padding: 4px 10px; border: 0; border-radius: 9px; background: var(--rd-chip, rgb(28 30 36 / 6%));
+  color: var(--rd-text); font: inherit; font-size: 12.5px;
+}
+.rd-dashboard .rd-mini-add select { color: var(--rd-muted); font-size: 11.5px; }
+.rd-dashboard .rd-mini-add :is(select, input):focus-visible { outline: 2px solid var(--rd-text); outline-offset: 0; }
+.rd-dashboard .rd-mini-add-error { margin: 0; color: var(--text-error); font-size: 11.5px; }
+body.rd-motion-off .rd-dashboard :is(.rd-mini-task.is-completing, .rd-mini-add) { animation: none; }
+@media (prefers-reduced-motion: reduce) { .rd-dashboard :is(.rd-mini-task.is-completing, .rd-mini-add) { animation: none; } }
+
+/* A folder dragged over the widget: it will open the plan card in the dashboard. */
+.rd-widget-drop {
+  position: absolute; inset: 6px; z-index: 20; display: grid; place-content: center; gap: 2px; padding: 12px; border-radius: 14px; pointer-events: none; text-align: center;
+  background: color-mix(in srgb, var(--background-primary) 80%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text-normal) 30%, transparent);
+  animation: rd-mini-add-in 200ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.rd-widget-drop strong { font-size: 13px; }
+.rd-widget-drop span { color: var(--text-muted); font-size: 11.5px; }
+.rd-widget-drop.is-rejecting { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text-error) 45%, transparent); }
+
+/* ---------- Widget focus ----------
+ * Focused on a project: a back arrow and the name (parent muted before a sub-project); the ring becomes the way back to
+ * all projects. Switching pushes the content in from the side it came from, on the widget spring. */
+.rd-dashboard .rd-mini-header.is-focused { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 2px; }
+.rd-dashboard .rd-mini-back {
+  display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-height: 26px; margin: 0 0 0 -6px; padding: 0 8px 0 2px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--rd-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background-color var(--rd-t-enter, 200ms) var(--rd-c-move, ease), color var(--rd-t-enter, 200ms) var(--rd-c-move, ease);
+}
+.rd-dashboard .rd-mini-back:hover { background: var(--rd-chip); color: var(--rd-text); }
+.rd-dashboard .rd-mini-back:focus-visible { outline: 2px solid var(--rd-text); outline-offset: 1px; }
+.rd-dashboard .rd-mini-back-glyph { flex: none; width: 16px; height: 16px; }
+.rd-dashboard .rd-mini-back-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-dashboard .rd-mini-focus-name {
+  grid-column: 1 / -1; margin: 0 0 2px; padding: 0 2px 0 4px; overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  font-size: 15px; line-height: 1.3;
+}
+.rd-dashboard .rd-mini-ring.is-link { border-radius: 50%; cursor: pointer; transition: transform 500ms var(--rd-widget-spring, ease); }
+.rd-dashboard .rd-mini-ring.is-link:hover { transform: scale(1.05); }
+.rd-dashboard .rd-mini-ring.is-link:focus-visible { outline: 2px solid var(--rd-text); outline-offset: 2px; }
+.rd-dashboard .is-pushing-forward > .rd-mini-section { animation: rd-mini-push-forward 640ms var(--rd-widget-spring, cubic-bezier(.16, 1, .3, 1)) both; }
+.rd-dashboard .is-pushing-back > .rd-mini-section { animation: rd-mini-push-back 640ms var(--rd-widget-spring, cubic-bezier(.16, 1, .3, 1)) both; }
+.rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section:nth-of-type(2) { animation-delay: 40ms; }
+.rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section:nth-of-type(3) { animation-delay: 80ms; }
+.rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section:nth-of-type(n+4) { animation-delay: 120ms; }
+@keyframes rd-mini-push-forward { from { opacity: 0; translate: 22px 0; } }
+@keyframes rd-mini-push-back { from { opacity: 0; translate: -22px 0; } }
+body.rd-motion-subtle .rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section { animation-name: rd-plan-fade; }
+body.rd-motion-off .rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section { animation: none; }
+@media (prefers-reduced-motion: reduce) { .rd-dashboard :is(.is-pushing-forward, .is-pushing-back) > .rd-mini-section { animation: none; } }
+
+/* ---------- Widget dock magnification (see installDock in widget.ts) ----------
+ * widget.ts eases each section's `scale` and its lift (0-1) every frame, so the card, its text and its shadow move as
+ * one surface with continuous velocity. `scale` composes with the `translate` of the wake and push animations instead
+ * of fighting over `transform`. While the widget is awake, sections are composited layers so text is not re-laid out
+ * mid-motion. */
+.rd-widget-frame:not(.is-idle) .rd-mini-section {
+  position: relative; transform-origin: 50% 50%; will-change: scale;
+  box-shadow: var(--rd-glass-shadow, 0 0 #0000), 0 10px 26px -14px rgb(0 0 0 / calc(var(--rd-lift, 0) * 28%));
+}
+.rd-widget-frame:not(.is-idle) .rd-mini-section.is-lifted { z-index: 1; }
+body.theme-dark .rd-widget-frame:not(.is-idle) .rd-mini-section {
+  box-shadow: 0 0 0 1px rgb(255 255 255 / calc(var(--rd-lift, 0) * 6%)), 0 12px 28px -12px rgb(0 0 0 / calc(var(--rd-lift, 0) * 60%));
+}
+
+/* ---------- Widget width ----------
+ * The mini grid's column must not grow to a long, unbreakable title (a grid item's minimum is its content); the title
+ * truncates instead. Horizontal overflow is clipped so a magnified card never adds a scrollbar. */
+.rd-dashboard .rd-module.rd-mini { grid-template-columns: minmax(0, 1fr); }
+.rd-dashboard .rd-module.rd-mini > * { min-width: 0; }
+.rd-dashboard .rd-mini-header .rd-header-copy { flex: 1 1 auto; min-width: 0; }
+.rd-dashboard .rd-mini-header .rd-header-actions { flex: none; }
+.rd-native-dashboard.rd-mini-host { overflow-x: clip; }
+
+/* ---------- Widget: focused progress bars ----------
+ * Beside the ring of a focused project: a small column chart, one column per sub-project or top-level chapter,
+ * standing on a hairline baseline. Columns are square-shouldered (3 px corners) and solid progress teal; the unfinished
+ * part is only a whisper of tint, with no border, and a column without milestones is just a stub on the baseline.
+ * Like the macOS Dock, the column under the pointer and its neighbours grow (widget.ts sets --rd-bar-m each frame)
+ * and take more room, so the others move aside. Hovering names a column; clicking opens the detail in the dashboard. */
+.rd-dashboard .rd-mini-bars {
+  --rd-bar-w: 14px; --rd-bar-h: 38px;
+  display: flex; align-items: flex-end; justify-content: center; gap: 6px; height: 56px; padding: 0 4px;
+  background: linear-gradient(color-mix(in srgb, var(--rd-text, var(--text-normal)) 14%, transparent), color-mix(in srgb, var(--rd-text, var(--text-normal)) 14%, transparent)) 0 100% / 100% 1px no-repeat;
+}
+.rd-dashboard .rd-mini-bars.is-dense { --rd-bar-w: 9px; gap: 4px; }
+.rd-dashboard button.rd-mini-bar {
+  position: relative; flex: none; width: calc(var(--rd-bar-w) * var(--rd-bar-m, 1)); height: calc(var(--rd-bar-h) * var(--rd-bar-m, 1));
+  margin: 0; padding: 0; border: 0; border-radius: 3px 3px 0 0; overflow: hidden; cursor: pointer; box-shadow: none;
+  background: color-mix(in srgb, var(--rd-text, var(--text-normal)) 4%, transparent);
+}
+.rd-dashboard button.rd-mini-bar:hover:not(:disabled) { background: color-mix(in srgb, var(--rd-text, var(--text-normal)) 8%, transparent); }
+.rd-dashboard button.rd-mini-bar:focus-visible { outline: 2px solid var(--rd-text); outline-offset: 2px; }
+.rd-dashboard .rd-mini-bar-fill {
+  position: absolute; inset: auto 0 0 0; border-radius: 3px 3px 0 0; background: var(--rd-progress, #24ab9c);
+  transition: height var(--rd-t-data, 520ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+.rd-dashboard button.rd-mini-bar.is-empty { height: calc(3px * var(--rd-bar-m, 1)); background: color-mix(in srgb, var(--rd-text, var(--text-normal)) 18%, transparent); }
+.rd-dashboard .rd-mini-bar-fill.is-tweening { animation: rd-mini-bar-grow var(--rd-t-data, 520ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both; }
+@keyframes rd-mini-bar-grow { from { height: var(--rd-from, 0%); } }
+.rd-dashboard .rd-mini-summary .rd-mini-bars + .rd-mini-caption { margin-top: 6px; text-align: center; }
+body.rd-motion-off .rd-dashboard .rd-mini-bar-fill { transition: none; animation: none; }
+
+/* ---------- Milestone lists: edit in place, add like a to-do list ----------
+ * The title is a quiet button (click to rename); a date and × appear at the end of the row on hover or focus. The
+ * composer is one line with a + and an optional date, always ready below the list. */
+.rd-dashboard .rd-paper-task-line { display: flex; align-items: flex-start; gap: 10px; }
+.rd-dashboard .rd-paper-task-line > .rd-paper-task-label { flex: none; padding-top: 0; }
+.rd-dashboard .rd-paper-task-text { flex: 1 1 auto; min-width: 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.rd-dashboard .rd-paper-task.is-accepted .rd-paper-task-text { color: var(--rd-muted); }
+.rd-dashboard .rd-paper-task-text.is-editable { border-radius: 6px; cursor: text; transition: background-color var(--rd-t-enter, 200ms) var(--rd-c-move, ease); }
+.rd-dashboard .rd-paper-task-text.is-editable:hover { background: var(--rd-chip); }
+.rd-dashboard .rd-paper-task-text.is-editable:focus-visible { outline: 2px solid var(--rd-text); outline-offset: 2px; }
+.rd-dashboard .rd-paper-task-text.is-overdue, .rd-dashboard .rd-mini-task.is-overdue .rd-mini-row-title { color: var(--rd-overdue, #c2842a); }
+/* Editing keeps the title's own type and place: a caret and a faint underline, no box. */
+.rd-dashboard .rd-paper-task-text.is-editing, .rd-dashboard .rd-paper-task-text.is-editing:hover { background: none; outline: none; cursor: text; border-radius: 0; box-shadow: 0 1px 0 color-mix(in srgb, var(--rd-text, var(--text-normal)) 35%, transparent); }
+.rd-dashboard .rd-paper-task-text.is-editing:focus-visible { outline: none; }
+.rd-dashboard .rd-task-actions { display: flex; flex: none; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--rd-t-enter, 200ms) var(--rd-c-move, ease); }
+.rd-dashboard .rd-paper-task:hover .rd-task-actions, .rd-dashboard .rd-task-actions:focus-within { opacity: 1; }
+.rd-dashboard .rd-task-action { position: relative; display: inline-grid; place-items: center; width: 24px; height: 24px; margin: -2px 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--rd-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.rd-dashboard .rd-task-action:hover { background: var(--rd-chip-hover); color: var(--rd-text); }
+.rd-dashboard .rd-task-delete:hover { color: var(--text-error, var(--rd-bad)); }
+.rd-dashboard .rd-task-action-glyph { width: 14px; height: 14px; }
+.rd-dashboard .rd-task-due-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+@media (hover: none) { .rd-dashboard .rd-task-actions { opacity: 1; } }
+
+.rd-dashboard form.rd-task-composer { display: flex; align-items: center; gap: 10px; flex: 1 1 100%; width: 100%; margin: 4px 0 0; padding: 8px 2px; border-bottom: 1px solid var(--rd-line); }
+.rd-dashboard .rd-task-composer-plus { position: relative; flex: none; width: 13px; height: 13px; margin: 0 1px; color: var(--rd-muted); }
+.rd-dashboard .rd-task-composer-plus::before, .rd-dashboard .rd-task-composer-plus::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 1.6px; border-radius: 1px; background: currentColor; translate: -50% -50%; }
+.rd-dashboard .rd-task-composer-plus::after { rotate: 90deg; }
+.rd-dashboard .rd-task-composer:focus-within .rd-task-composer-plus { color: var(--rd-text); }
+.rd-dashboard input.rd-task-composer-title { flex: 1 1 auto; min-width: 0; height: 28px; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--rd-text); font: inherit; font-size: 13px; outline: none; }
+.rd-dashboard input.rd-task-composer-title::placeholder { color: var(--rd-muted); }
+.rd-dashboard input.rd-task-composer-due { flex: none; width: 128px; height: 26px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--rd-muted); font: inherit; font-size: 12px; opacity: 0; transition: opacity var(--rd-t-enter, 200ms) var(--rd-c-move, ease); }
+.rd-dashboard .rd-task-composer:focus-within input.rd-task-composer-due, .rd-dashboard input.rd-task-composer-due:valid:not(:placeholder-shown) { opacity: 1; }
+.rd-dashboard input.rd-task-composer-due:hover, .rd-dashboard input.rd-task-composer-due:focus { background: var(--rd-chip); }
+.rd-dashboard .rd-paper-task-meta .rd-due.is-overdue { color: var(--rd-overdue, #c2842a); font-weight: 600; }
+.rd-dashboard .rd-paper-task-meta .rd-next-chip { padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--rd-progress, #24ab9c) 16%, transparent); color: var(--rd-text); font-weight: 550; }
+
+/* Composer extras for paper projects: section and stage as quiet text pickers, shown while composing or once chosen. */
+.rd-dashboard select.rd-task-composer-pick {
+  flex: none; max-width: 150px; height: 26px; padding: 0 4px; border: 0; border-radius: 7px; background: transparent; box-shadow: none;
+  color: var(--rd-muted); font: inherit; font-size: 12px; text-overflow: ellipsis; cursor: pointer; opacity: 0; transition: opacity var(--rd-t-enter, 200ms) var(--rd-c-move, ease);
+}
+.rd-dashboard .rd-task-composer:focus-within select.rd-task-composer-pick, .rd-dashboard .rd-task-composer select.rd-task-composer-section:has(option:checked:not([value=""])) { opacity: 1; }
+.rd-dashboard select.rd-task-composer-pick:hover, .rd-dashboard select.rd-task-composer-pick:focus { background: var(--rd-chip); color: var(--rd-text); }
+.rd-dashboard select.rd-task-composer-pick[hidden] { display: none; }

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "id": "latex-paper",
+  "title": "LaTeX paper or thesis",
+  "description": "A TeX entry file (\\documentclass) with literal includes and an optional matching build log. Extraction uses the existing LaTeX adapter: section structure, body word counts and build status.",
+  "projectType": "paper",
+  "sourceKind": "latex",
+  "origin": {
+    "createdBy": "builtin",
+    "approvedAt": null,
+    "version": 1,
+    "builtin": true
+  },
+  "detect": {
+    "allOf": [
+      {
+        "glob": "**/*.tex",
+        "description": "TeX source files"
+      }
+    ],
+    "anyOf": [
+      {
+        "contains": {
+          "glob": "**/*.tex",
+          "regex": "^[^%\\n]*\\\\documentclass\\b",
+          "maxBytes": 65536
+        },
+        "description": "a TeX entry file declares \\documentclass"
+      },
+      {
+        "glob": "main.tex",
+        "description": "a main.tex entry at the folder root"
+      }
+    ],
+    "noneOf": [],
+    "threshold": 0.7
+  },
+  "extract": {
+    "adapter": "latex"
+  },
+  "milestoneTemplate": "paper-section-draft-complete",
+  "subprojectRole": "standalone"
+}

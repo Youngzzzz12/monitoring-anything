@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Monitoring Anything",
+  "mainBinaryName": "monitoring-anything",
+  "version": "0.1.0",
+  "identifier": "io.github.monitoring-anything",
+  "build": {
+    "beforeDevCommand": "npm run python:fetch && npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build && npm run python:fetch",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Monitoring Anything",
+        "width": 1280,
+        "height": 880,
+        "minWidth": 640,
+        "minHeight": 480,
+        "visible": false,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "app", "dmg", "deb", "appimage"],
+    "category": "Productivity",
+    "shortDescription": "Monitor the progress of anything you work on",
+    "longDescription": "Projects, milestones and live progress of papers, Word manuscripts, simulations and training runs, with a floating desktop widget.",
+    "copyright": "Copyright (c) 2026 Yang. MIT License.",
+    "license": "MIT",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../collector/tools/*.py": "collector/tools/",
+      "../collector/tools/adapters/*.py": "collector/tools/adapters/",
+      "../collector/tools/schemas/*.json": "collector/tools/schemas/",
+      "../collector/profiles/builtin/*.json": "collector/profiles/builtin/",
+      "../collector/profiles/milestones/builtin/*.json": "collector/profiles/milestones/builtin/",
+      "python": "python",
+      "../skill/monitoring-anything/SKILL.md": "skill/monitoring-anything/SKILL.md",
+      "../LICENSE": "LICENSE"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

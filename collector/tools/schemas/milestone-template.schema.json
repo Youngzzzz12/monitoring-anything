@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Monitoring Anything milestone template",
+  "description": "Built-in templates live in System/profiles/milestones/builtin, user templates in System/profiles/milestones/user. Applied by `milestones apply` (or connect --milestone-template); tasks use the Connector milestoneTask format and are appended idempotently to Projects/<id>/Project.md.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "title", "mode"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "title": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "appliesTo": {"type": "array", "items": {"enum": ["thesis", "paper", "simulation", "experiment", "other"]}, "description": "Project types the UI should offer this template for."},
+    "mode": {"enum": ["per-section", "static"], "description": "per-section needs a collected paper snapshot; static adds plain tasks."},
+    "sections": {"enum": ["leaf", "all", "top"], "default": "leaf"},
+    "stages": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["draft", "figures", "references", "review", "complete"]}},
+    "titleFormat": {"type": "string", "default": "{section} — {stage}", "description": "Placeholders: {section}, {stage}, {Stage}."},
+    "groupBy": {"enum": ["root", "none"], "default": "root", "description": "root: tasks go under a '### <top-level section>' heading inside ## Milestones."},
+    "tasks": {"type": "array", "minItems": 1, "maxItems": 400, "items": {"type": "object", "required": ["title"], "additionalProperties": false,
+              "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 300}, "when": {"type": "string"}}}}
+  }
+}

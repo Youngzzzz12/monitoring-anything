@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "id": "word-manuscript",
+  "title": "Word manuscript",
+  "description": "A paper or thesis written in Word (.docx). Reports the newest document's body words (CJK characters count one each), headings, comments and tracked revisions. Exported PDFs are listed as results.",
+  "projectType": "paper",
+  "origin": {
+    "createdBy": "builtin",
+    "approvedAt": null,
+    "version": 1,
+    "builtin": true
+  },
+  "detect": {
+    "allOf": [
+      {"glob": "**/*.docx", "minCount": 1, "description": "a Word document"}
+    ],
+    "anyOf": [
+      {"glob": "*.docx", "minCount": 1, "description": "a Word document at the top of the folder"}
+    ],
+    "noneOf": [
+      {"glob": "**/*.tex", "description": "no LaTeX sources (those are LaTeX papers)"}
+    ],
+    "threshold": 0.7
+  },
+  "extract": {
+    "metrics": [
+      {"id": "words", "label": "Words", "value": {"docx": "**/*.docx", "measure": "words", "type": "integer"}},
+      {"id": "headings", "label": "Headings", "value": {"docx": "**/*.docx", "measure": "headings", "type": "integer"}},
+      {"id": "comments", "label": "Comments", "value": {"docx": "**/*.docx", "measure": "comments", "type": "integer"}},
+      {"id": "revisions", "label": "Tracked changes", "value": {"docx": "**/*.docx", "measure": "revisions", "type": "integer"}}
+    ],
+    "artifacts": [
+      {"glob": "**/*.pdf", "type": "pdf"}
+    ]
+  },
+  "subprojectRole": "standalone"
+}

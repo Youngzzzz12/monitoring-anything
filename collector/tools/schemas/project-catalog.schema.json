@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Logical research project",
+  "type": "object",
+  "required": ["schemaVersion", "projectId", "title", "projectNote", "projectDashboard", "sourceIds"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "projectId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "title": {"type": "string", "minLength": 1},
+    "projectNote": {"type": "string", "pattern": "^Research Dashboard/Projects/[a-z0-9][a-z0-9_-]{0,63}/Project\\.md$"},
+    "projectDashboard": {"type": "string", "pattern": "^Research Dashboard/Projects/[a-z0-9][a-z0-9_-]{0,63}/Dashboard\\.canvas$"},
+    "sourceIds": {"type": "array", "minItems": 0, "uniqueItems": true, "description": "Member source IDs; empty for a sourceless logical project (for example a thesis grouping sub-projects).", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"}},
+    "discovery": {
+      "type": "object",
+      "description": "Sub-project discovery (top-level projects only). The folder is scanned, never monitored; its absolute path lives only in config/local/<host>.json under rootAlias.",
+      "required": ["rootAlias"],
+      "properties": {
+        "rootAlias": {"type": "string", "pattern": "^discovery:[a-z0-9][a-z0-9_-]{0,63}$"},
+        "autoAccept": {"type": "boolean", "description": "Connect new folders whose best standalone match has confidence >= 0.8 automatically."},
+        "ignore": {"type": "array", "maxItems": 50, "items": {"type": "string", "minLength": 1, "maxLength": 200}, "description": "Case-insensitive folder-name globs to skip."}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

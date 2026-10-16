@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0",
+  "id": "paper-section-draft-complete",
+  "title": "Paper: draft + complete for each leaf section",
+  "description": "After the first collection, adds two tasks for every leaf section of the paper (draft, complete), bound to the section with [paper::][chapter::][stage::] and grouped under the top-level chapter heading. Existing identical bindings are skipped.",
+  "mode": "per-section",
+  "appliesTo": [
+    "paper",
+    "thesis"
+  ],
+  "sections": "leaf",
+  "stages": [
+    "draft",
+    "complete"
+  ],
+  "titleFormat": "{section} — {stage}",
+  "groupBy": "root"
+}

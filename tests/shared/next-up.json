@@ -1,0 +1,27 @@
+{
+  "description": "One scenario for both Next up implementations (src/view/view.ts nextMilestones and collector/tools/ma.py next_up). Dates are relative to today (offsetDays). Expected titles are in order.",
+  "projects": [
+    {"id": "thesis", "title": "Thesis", "type": "thesis", "health": "active", "parentId": null, "sourceIds": [],
+     "milestones": ["- [x] Outline #milestone", "- [ ] Lit review {due:-3} #milestone", "- [ ] Methods chapter #milestone", "- [ ] Results chapter #milestone"]},
+    {"id": "paper", "title": "Paper", "type": "paper", "health": "active", "parentId": "thesis", "sourceIds": ["paper-tex"],
+     "milestones": ["- [x] Intro draft #milestone [paper:: paper-tex] [chapter:: intro] [stage:: draft]",
+                    "- [ ] Method draft #milestone [paper:: paper-tex] [chapter:: method] [stage:: draft]",
+                    "- [ ] Setup draft #milestone [paper:: paper-tex] [chapter:: setup] [stage:: draft]",
+                    "- [ ] Submit {due:5} #milestone"]},
+    {"id": "sim", "title": "Simulations", "type": "simulation", "health": "paused", "parentId": null, "sourceIds": [],
+     "milestones": ["- [ ] Mesh study #milestone", "- [ ] Old deadline {due:-10} #milestone"]},
+    {"id": "done", "title": "Finished", "type": "paper", "health": "completed", "parentId": null, "sourceIds": [],
+     "milestones": ["- [ ] Leftover {due:-20} #milestone"]}
+  ],
+  "chapters": {
+    "paper-tex": [
+      {"id": "intro", "title": "Introduction", "parentId": null, "deltaToday": 120, "deltaWeek": 300, "changedMinutesAgo": null},
+      {"id": "method", "title": "Method", "parentId": null, "deltaToday": 0, "deltaWeek": 0, "changedMinutesAgo": 300},
+      {"id": "setup", "title": "Setup", "parentId": "method", "deltaToday": 0, "deltaWeek": 0, "changedMinutesAgo": 5}
+    ]
+  },
+  "expected": {
+    "all": ["Lit review", "Old deadline", "Submit"],
+    "focusThesis": ["Lit review", "Submit", "Setup draft", "Method draft", "Methods chapter"]
+  }
+}

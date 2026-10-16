@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "id": "simulation-basic",
+  "title": "Simulation: basic workflow",
+  "description": "Generic simulation milestones. Existing tasks with the same title are skipped.",
+  "mode": "static",
+  "appliesTo": [
+    "simulation",
+    "experiment",
+    "other"
+  ],
+  "tasks": [
+    {
+      "title": "Model set up and inputs verified"
+    },
+    {
+      "title": "Pilot run checked (mesh, time step, boundary conditions)"
+    },
+    {
+      "title": "All planned runs complete"
+    },
+    {
+      "title": "Results post-processed and figures produced"
+    },
+    {
+      "title": "Results reviewed and accepted"
+    }
+  ]
+}

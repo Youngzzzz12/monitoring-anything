@@ -1,0 +1,266 @@
+/* Ported from the Obsidian plugin stylesheet Research Dashboard/System/tools/obsidian-plugin/styles.css (2026-10-10):
+ * page navigation (buffered swaps, View Transitions) and the condensed top bar. Modal rules are restyled in app.css. */
+/* ---------- Native page navigation ----------
+ * Buffered swaps, View Transitions and the condensed top bar. Page tokens (--rd-*) live on .rd-native-dashboard;
+ * ::view-transition-* pseudo-elements inherit from html, so they use the snippet's :root motion steps
+ * (--rd-t-exit 120ms, --rd-t-enter 200ms, --rd-t-move 320ms; --rd-c-move for travel and size, --rd-c-enter only for
+ * fades and short entrance offsets). Every use carries a literal fallback for when the snippet is disabled.
+ */
+
+/* A buffered page lays out and paints offscreen without affecting the visible page or its scroll height. */
+.rd-native-dashboard > .rd-app-grid.is-buffering {
+  height: 0;
+  min-height: 0;
+  overflow: clip;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A navigation still buffering after a 300ms beat shows a hairline sweep pinned to the very top. The visible page keeps
+ * its brightness: dimming it and then swapping in a bright page read as a flash. */
+.rd-native-dashboard.is-navigating { cursor: progress; }
+.rd-native-dashboard.is-navigating::before {
+  content: "";
+  position: sticky;
+  top: calc(-1 * var(--rd-topbar-inset-top, 34px));
+  z-index: 31;
+  display: block;
+  height: 2px;
+  margin: calc(-1 * var(--rd-topbar-inset-top, 34px)) calc(-1 * var(--rd-topbar-inset-end, 36px)) calc(var(--rd-topbar-inset-top, 34px) - 2px) calc(-1 * var(--rd-topbar-inset-start, 36px));
+  background: linear-gradient(90deg, transparent, var(--rd-ink, currentColor), transparent) 0 0 / 30% 100% no-repeat;
+  pointer-events: none;
+  animation: var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-nav-in, 1.1s var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) infinite rd-nav-sweep;
+}
+body.rd-motion-off .rd-native-dashboard.is-navigating::before { animation: none; background-size: 100% 100%; opacity: .4; }
+@keyframes rd-nav-in { from { opacity: 0; } }
+@keyframes rd-nav-sweep { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+
+/* A navigated page arrives through the page transition; its first-open entrance motion would play twice. */
+.rd-app-grid.rd-no-entrance .rd-dashboard.is-entering,
+.rd-app-grid.rd-no-entrance .rd-dashboard.is-entering * {
+  animation: none !important;
+}
+
+/* Shared with the Dashboard view: the rest of the window never cross-fades. */
+html.rd-vt::view-transition-old(root), html.rd-vt::view-transition-new(root) { animation: none; }
+html.rd-vt::view-transition-old(root),
+html.rd-vt::view-transition-new(root) { mix-blend-mode: normal; }
+
+/* Input reaches the new page underneath while the snapshots settle. */
+html.rd-vt:is(.rd-vt-forward, .rd-vt-back)::view-transition { pointer-events: none; }
+
+/* The group repaints the page's own background (copied by the connector), so content dissolves and slides over a
+ * still surface: no window showing through mid-fade and no bare edge while the snapshots travel. */
+html.rd-vt::view-transition-group(*.rd-page) {
+  overflow: clip;
+  animation-duration: var(--rd-t-move, 320ms);
+  animation-timing-function: var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+  background-color: var(--rd-vt-page-color, transparent);
+  background-image: var(--rd-vt-page-image, none);
+}
+html.rd-vt::view-transition-image-pair(*.rd-page) { isolation: isolate; }
+html.rd-vt::view-transition-old(*.rd-page),
+html.rd-vt::view-transition-new(*.rd-page) { mix-blend-mode: plus-lighter; }
+/* Old and new cross-fade on the same step and curve with plus-lighter, so their opacities always sum to one: content
+ * never dips (a staggered fade left both pages faint mid-way and read as a flash). Both travel on the move step. */
+html.rd-vt-forward::view-transition-old(*.rd-page) {
+  animation:
+    var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-out,
+    var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-drift-left;
+}
+html.rd-vt-forward::view-transition-new(*.rd-page) {
+  animation:
+    var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-in,
+    var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-enter-right;
+}
+html.rd-vt-back::view-transition-old(*.rd-page) {
+  animation:
+    var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-out,
+    var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-drift-right;
+}
+html.rd-vt-back::view-transition-new(*.rd-page) {
+  animation:
+    var(--rd-t-enter, 200ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-in,
+    var(--rd-t-move, 320ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-enter-left;
+}
+
+/* The project title travels between its Overall row and the project page heading on the move step and curve (no
+ * expo-out: on a long morph it covers most of the distance in the first frames); the crisp new title carries it. */
+html.rd-vt::view-transition-group(*.rd-title) {
+  animation-duration: var(--rd-t-move, 320ms);
+  animation-timing-function: var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+html.rd-vt::view-transition-old(*.rd-title) { animation: var(--rd-t-exit, 120ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-out; }
+html.rd-vt::view-transition-new(*.rd-title) { animation: var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) both rd-vt-fade-in; }
+html.rd-vt .rd-native-dashboard .rd-vt-shared { width: fit-content; }
+html.rd-vt .rd-native-dashboard .rd-vt-shared::after { display: none !important; }
+html.rd-vt .rd-native-dashboard a.rd-vt-shared { text-decoration-color: transparent !important; transition: none !important; }
+
+/* The condensed bar is captured on its own (rd-chrome): it holds its place and cross-fades on the entrance step while
+ * the page travels beneath it. Old and new keep the UA's complementary plus-lighter fades, so its surface never dips;
+ * they name the move curve themselves. Captured alone it loses its backdrop blur, so it is briefly more opaque. */
+html.rd-vt::view-transition-group(*.rd-chrome) {
+  animation-duration: var(--rd-t-enter, 200ms);
+  animation-timing-function: var(--rd-c-move, cubic-bezier(.2, 0, 0, 1));
+}
+html.rd-vt::view-transition-old(*.rd-chrome),
+html.rd-vt::view-transition-new(*.rd-chrome) { animation-timing-function: var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)); }
+html.rd-vt:is(.rd-vt-forward, .rd-vt-back) .rd-native-dashboard > .rd-topbar {
+  background: color-mix(in srgb, var(--background-primary) 94%, transparent);
+}
+
+/* Subtle motion: a cross-fade on the exit and entrance steps, without travel. */
+html.rd-vt.rd-vt-subtle::view-transition-group(*.rd-page) { animation-duration: var(--rd-t-enter, 200ms); }
+html.rd-vt.rd-vt-subtle::view-transition-old(*.rd-page) { animation: var(--rd-t-exit, 120ms) var(--rd-c-move, cubic-bezier(.2, 0, 0, 1)) both rd-vt-fade-out; }
+html.rd-vt.rd-vt-subtle::view-transition-new(*.rd-page) { animation: var(--rd-t-enter, 200ms) var(--rd-c-enter, cubic-bezier(.16, 1, .3, 1)) 20ms both rd-vt-fade-in; }
+
+@keyframes rd-vt-fade-out { to { opacity: 0; } }
+@keyframes rd-vt-fade-in { from { opacity: 0; } }
+@keyframes rd-vt-drift-left { to { transform: translateX(-8px); } }
+@keyframes rd-vt-drift-right { to { transform: translateX(8px); } }
+@keyframes rd-vt-enter-right { from { transform: translateX(16px); } }
+@keyframes rd-vt-enter-left { from { transform: translateX(-16px); } }
+
+/* Condensed top bar: sticky, full-bleed across the page padding, overlaying content without shifting it.
+ * Sticky offsets are measured from the scroller's padding edge, so a negative top pins it to the very top. */
+.rd-native-dashboard > .rd-topbar {
+  --rd-topbar-height: 52px;
+  position: sticky;
+  top: calc(-1 * var(--rd-topbar-inset-top, 34px));
+  z-index: 30;
+  box-sizing: border-box;
+  height: var(--rd-topbar-height);
+  margin: 0 calc(-1 * var(--rd-topbar-inset-end, 36px)) calc(-1 * var(--rd-topbar-height)) calc(-1 * var(--rd-topbar-inset-start, 36px));
+  padding: 0 var(--rd-topbar-inset-end, 36px) 0 var(--rd-topbar-inset-start, 36px);
+  color: var(--rd-text);
+  /* The dashboard's shared frosted-glass recipe (tooltips and menus use the same tokens). */
+  background: var(--rd-frost-bg, color-mix(in srgb, var(--background-primary) 86%, transparent));
+  -webkit-backdrop-filter: var(--rd-frost-filter, blur(20px) saturate(160%));
+  backdrop-filter: var(--rd-frost-filter, blur(20px) saturate(160%));
+  box-shadow: 0 1px 0 var(--rd-line);
+  font-family: var(--font-interface, var(--font-text));
+  opacity: 0;
+  visibility: hidden;
+}
+/* Scroll-linked: hidden (and not clickable) until the page header has scrolled away. Without support it stays hidden. */
+@supports (animation-timeline: scroll()) {
+  .rd-native-dashboard > .rd-topbar {
+    animation: rd-topbar-reveal linear both;
+    animation-timeline: scroll(nearest block);
+    animation-range: 72px 128px;
+  }
+  /* Subtle: fade without travel. No motion: the bar simply appears once the header has gone. */
+  @media (prefers-reduced-motion: no-preference) {
+    body.rd-motion-subtle .rd-native-dashboard > .rd-topbar { animation-name: rd-topbar-fade; }
+  }
+  body.rd-motion-off .rd-native-dashboard > .rd-topbar {
+    animation-name: rd-topbar-toggle;
+    animation-timing-function: steps(1, end);
+    animation-range: 100px 101px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @supports (animation-timeline: scroll()) {
+    .rd-native-dashboard > .rd-topbar {
+      animation-name: rd-topbar-toggle;
+      animation-timing-function: steps(1, end);
+      animation-range: 100px 101px;
+    }
+  }
+}
+@keyframes rd-topbar-reveal {
+  0% { opacity: 0; transform: translateY(-6px); visibility: hidden; }
+  40% { visibility: hidden; }
+  100% { opacity: 1; transform: none; visibility: visible; }
+}
+@keyframes rd-topbar-fade {
+  0% { opacity: 0; visibility: hidden; }
+  40% { visibility: hidden; }
+  100% { opacity: 1; visibility: visible; }
+}
+@keyframes rd-topbar-toggle {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
+}
+.rd-topbar-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  max-width: 1240px;
+  height: 100%;
+  margin: 0 auto;
+}
+.rd-topbar-leading { display: flex; justify-self: start; min-width: 0; }
+.rd-topbar-trailing { display: flex; justify-self: end; align-items: center; gap: 8px; min-width: 0; }
+.rd-topbar [hidden] { display: none !important; }
+.rd-topbar-title {
+  max-width: min(520px, 46cqw);
+  overflow: hidden;
+  color: var(--rd-text);
+  font: 600 15px/1.2 var(--font-interface, var(--font-text));
+  letter-spacing: -.012em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-native-dashboard .rd-topbar :is(.rd-topbar-back, .rd-topbar-chip) {
+  display: inline-flex;
+  align-items: center;
+  height: auto;
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  font: 500 12.5px/1.4 var(--font-interface, var(--font-text));
+  cursor: pointer;
+  transition: background-color var(--rd-dur-fast) var(--rd-ease), color var(--rd-dur-fast) var(--rd-ease);
+}
+.rd-native-dashboard .rd-topbar .rd-topbar-back {
+  gap: 6px;
+  margin-left: -10px;
+  padding: 4px 12px 4px 10px;
+  color: var(--rd-muted);
+  background: transparent;
+  font-size: 13px;
+}
+.rd-native-dashboard .rd-topbar .rd-topbar-back::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin: 0 1px 0 3px;
+  border-bottom: 1.75px solid currentColor;
+  border-left: 1.75px solid currentColor;
+  transform: rotate(45deg);
+}
+.rd-native-dashboard .rd-topbar .rd-topbar-back:hover { color: var(--rd-text); background: var(--rd-chip); }
+.rd-native-dashboard .rd-topbar .rd-topbar-chip { padding: 5px 14px; color: var(--rd-text); background: var(--rd-chip); }
+.rd-native-dashboard .rd-topbar .rd-topbar-chip:hover:not(:disabled) { background: var(--rd-chip-hover); }
+.rd-native-dashboard .rd-topbar .rd-topbar-chip:disabled { opacity: .45; cursor: default; }
+/* Same focus ring as the dashboard's controls (the faint line colour fell below 3:1). */
+.rd-native-dashboard .rd-topbar :is(.rd-topbar-back, .rd-topbar-chip):focus-visible {
+  outline: 2px solid var(--rd-accent, var(--text-normal));
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.rd-topbar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--rd-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.rd-topbar-live::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rd-faint);
+}
+.rd-topbar-live.is-running::before { background: var(--rd-ink); }
+@container research-app (max-width: 560px) {
+  .rd-topbar-live { gap: 0; font-size: 0; }
+  .rd-topbar-title { max-width: 52cqw; }
+}

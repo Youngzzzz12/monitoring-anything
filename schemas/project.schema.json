@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Youngzzzz12/monitoring-anything/schemas/project.schema.json",
+  "title": "Project record (projects/<id>/project.json)",
+  "description": "One research project: editable fields plus the IDs of its monitored sources. Milestones live beside it in milestones.md. Hierarchy has one displayed level: a project with a parentId cannot be a parent, and a parent must be top-level.",
+  "type": "object",
+  "required": ["schemaVersion", "projectId", "title", "sourceIds"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "projectId": { "$ref": "#/$defs/id", "description": "Must equal the folder name." },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "type": { "enum": ["thesis", "paper", "simulation", "experiment", "other"], "default": "other" },
+    "parentId": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }], "default": null },
+    "stage": { "enum": ["planned", "preparation", "modeling", "writing", "computation", "postprocessing", "validation", "review", "completed", "archived"], "default": "planned" },
+    "health": { "enum": ["active", "blocked", "paused", "completed"], "default": "active" },
+    "nextStep": { "type": ["string", "null"], "maxLength": 500 },
+    "due": { "anyOf": [{ "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }, { "type": "null" }] },
+    "archived": { "type": "boolean", "default": false },
+    "resources": { "type": "array", "items": { "anyOf": [{ "type": "string" }, { "type": "object", "properties": { "path": { "type": "string" }, "label": { "type": "string" } }, "required": ["path"] }] } },
+    "knowledge": { "type": "array" },
+    "sourceIds": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true, "description": "sources/<id>.json owned by this project." },
+    "importedFrom": { "type": "object", "description": "Set by the Obsidian importer." }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$", "not": { "enum": ["con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"] } }
+  }
+}

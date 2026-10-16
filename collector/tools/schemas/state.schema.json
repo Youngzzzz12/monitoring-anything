@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Monitoring Anything observed state",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "kind",
+    "parentId",
+    "projectNote",
+    "runtime",
+    "cases",
+    "collection",
+    "artifacts",
+    "details",
+    "provenance"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "latex",
+        "abaqus",
+        "isale"
+      ]
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "projectNote": {
+      "type": "string"
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "status",
+        "progress",
+        "step",
+        "currentValue",
+        "targetValue",
+        "unit",
+        "runId"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "unconfigured",
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "progress": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "step": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currentValue": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "targetValue": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "cases": {
+      "type": "object",
+      "required": [
+        "planned",
+        "completed",
+        "running",
+        "failed",
+        "unknown"
+      ],
+      "properties": {
+        "planned": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "completed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "running": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "failed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "unknown": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": [
+        "health",
+        "attemptedAt",
+        "lastSuccessfulAt",
+        "sourceModifiedAt",
+        "collectorVersion",
+        "hostId",
+        "staleAfterSeconds",
+        "error"
+      ],
+      "properties": {
+        "health": {
+          "enum": [
+            "unconfigured",
+            "fresh",
+            "stale",
+            "error"
+          ]
+        },
+        "attemptedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSuccessfulAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "sourceModifiedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "collectorVersion": {
+          "type": "string"
+        },
+        "hostId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        "staleAfterSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "path",
+          "verifiedAt",
+          "runId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "verifiedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "runId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "details": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "allOf": [{
+          "if": {"properties": {"kind": {"const": "paper"}}, "required": ["kind"]},
+          "then": {"$ref": "#/$defs/paper"}
+        }]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "sourceFiles",
+        "parserVersion",
+        "configId"
+      ],
+      "properties": {
+        "sourceFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parserVersion": {
+          "type": "string"
+        },
+        "configId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "paper": {
+      "type": "object",
+      "required": ["kind", "schemaVersion", "title", "mainFile", "countingPolicy", "countingMethod", "observedAt", "revision", "bodyWords", "chapters", "warnings", "dependencies", "activity"],
+      "properties": {
+        "kind": {"const": "paper"},
+        "schemaVersion": {"const": 1},
+        "title": {"type": "string"},
+        "mainFile": {"type": "string"},
+        "countingPolicy": {"type": "string"},
+        "countingMethod": {"type": "string"},
+        "observedAt": {"type": "string", "format": "date-time"},
+        "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "bodyWords": {"type": "integer", "minimum": 0},
+        "chapters": {"type": "array", "maxItems": 1000, "items": {"$ref": "#/$defs/paperSection"}},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "dependencies": {"type": "array", "items": {"type": "string"}},
+        "activity": {
+          "type": "object", "required": ["timezone", "today", "week"],
+          "properties": {
+            "timezone": {"const": "Europe/London"},
+            "trackingStartedAt": {"type": "string", "format": "date-time"},
+            "today": {"$ref": "#/$defs/activityBaseline"},
+            "week": {"$ref": "#/$defs/activityBaseline"}
+          }
+        }
+      }
+    },
+    "activityBaseline": {
+      "type": "object", "required": ["baselineAt", "available"],
+      "properties": {
+        "baselineAt": {"type": ["string", "null"], "format": "date-time", "description": "Actual observation timestamp used for the comparison."},
+        "available": {"type": "boolean"},
+        "baselineKind": {"enum": ["boundary", "first-observation", null]},
+        "coverage": {"enum": ["full", "partial"], "description": "Full uses an actual observation at or up to two hours before the requested boundary; partial begins at the first actual observation within the window. Baseline timestamps make this approximation explicit."},
+        "windowStartAt": {"type": "string", "format": "date-time", "description": "Requested London midnight or rolling seven-day boundary; distinct from the actual baseline timestamp."}
+      }
+    },
+    "paperSection": {
+      "type": "object",
+      "required": ["id", "title", "level", "parentId", "file", "line", "bodyWords", "ownBodyWords", "sourceHash", "modifiedAt", "deltaToday", "deltaWeek"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-zA-Z0-9_-]{1,128}$"},
+        "title": {"type": "string"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 4},
+        "parentId": {"type": ["string", "null"]},
+        "file": {"type": "string"},
+        "line": {"type": "integer", "minimum": 1},
+        "bodyWords": {"type": "integer", "minimum": 0},
+        "ownBodyWords": {"type": "integer", "minimum": 0},
+        "sourceHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "modifiedAt": {"type": "string", "format": "date-time"},
+        "deltaToday": {"type": ["integer", "null"]},
+        "deltaWeek": {"type": ["integer", "null"]},
+        "changedAt": {"type": ["string", "null"], "format": "date-time", "description": "Last collection at which this section's own source changed (content fingerprint); null until a change is observed."}
+      }
+    }
+  }
+}

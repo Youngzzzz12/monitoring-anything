@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Logical research project record (Projects/<id>/Project.md frontmatter)",
+  "description": "Editable fields owned by the user and the Connector forms. Unknown properties are preserved. Hierarchy has one displayed level: a project with parent_id cannot itself be a parent, and a project with children cannot be given a parent.",
+  "type": "object",
+  "required": ["type", "project_id", "title"],
+  "properties": {
+    "type": {"const": "research-project"},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "title": {"type": "string", "minLength": 1},
+    "project_kind": {"type": "string"},
+    "project_type": {
+      "enum": ["thesis", "paper", "simulation", "experiment", "other"],
+      "description": "Labels: Thesis, Paper, Simulation, Experiment, Other. New projects default to other; folder connections infer latex→paper and abaqus/isale→simulation. A missing value reads as other."
+    },
+    "parent_id": {
+      "anyOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"}, {"type": "null"}],
+      "description": "Logical project ID of a top-level parent, or null (an empty YAML value also reads as null)."
+    },
+    "stage": {"type": "string"},
+    "project_health": {"type": "string"},
+    "next_step": {"type": ["string", "null"]},
+    "due": {"type": ["string", "null"]},
+    "archived": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

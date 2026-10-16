@@ -563,7 +563,7 @@ def connect_folder(vault: Path, host: str, source: str | Path, project_id: str, 
         # can open the note and repair collection without repeating registration.
         health, status, error = "error", "unknown", f"{type(failure).__name__}: {failure}"
     result = {"projectId": project_id, "projectNote": config["projectNote"],
-              "configPath": config_path.relative_to(vault).as_posix(), "collectionHealth": health,
+              "configPath": config_path.relative_to(vault.resolve()).as_posix(), "collectionHealth": health,
               "runtimeStatus": status, "collectionError": error, "dashboardProjectId": identity,
               "projectDashboard": paths["projectDashboard"],
               "projectRecord": layout.catalog(identity) if layout.record_in_catalog else paths["projectNote"],

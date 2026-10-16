@@ -449,7 +449,8 @@ class ManifestPrivacyTests(Fixture):
             manifest(self.vault, self.source, exclude=["../outside"])
         completed = self.cli("plan", "manifest", "--source", str(self.source), "--exclude", "private")
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertNotIn("private/", completed.stdout)
+        listed = [item["path"] for item in json.loads(completed.stdout)["tree"]]
+        self.assertFalse(any(path.startswith("private") for path in listed), listed)
 
 
 if __name__ == "__main__":

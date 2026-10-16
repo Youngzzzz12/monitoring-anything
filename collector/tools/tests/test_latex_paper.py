@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -21,6 +22,19 @@ from adapters.latex_paper import MAX_HISTORY, analyze, body_words, observed_hist
 from dashboard_core import CollectionSuperseded, atomic_json, collect_one, register, validate_state
 
 NOW = dt.datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+
+
+def in_london(test):
+    """Day boundaries follow the computer's zone; these tests pin Europe/London (skipped without a zone database)."""
+    def run(self):
+        try:
+            ZoneInfo("Europe/London")
+        except (ZoneInfoNotFoundError, ValueError, OSError):
+            self.skipTest("No IANA time zone database (install tzdata)")
+        with patch.dict(os.environ, {"RD_TIMEZONE": "Europe/London"}):
+            return test(self)
+    run.__name__, run.__doc__ = test.__name__, test.__doc__
+    return run
 
 
 class LatexPaperTests(unittest.TestCase):
@@ -218,6 +232,7 @@ class LatexPaperTests(unittest.TestCase):
         self.assertEqual(edited["chapters"][0]["deltaToday"], 2)
         self.assertEqual(edited["chapters"][0]["deltaWeek"], 3)
 
+    @in_london
     def test_london_midnight_and_week_baselines_negative_edits_and_new_ids(self) -> None:
         self.file("main.tex", r"\section{Methods}\label{sec:methods}One two.")
         paper = self.paper()
@@ -284,6 +299,7 @@ class LatexPaperTests(unittest.TestCase):
         self.assertEqual(paper["activity"]["week"]["coverage"], "partial")
         self.assertEqual(paper["activity"]["trackingStartedAt"], history["trackingStartedAt"])
 
+    @in_london
     def test_london_dst_repeated_hour_keeps_one_daily_opening_anchor(self) -> None:
         self.file("main.tex", r"\section{Methods}\label{sec:methods}One.")
         first = dt.datetime(2026, 10, 25, 0, 30, tzinfo=UTC)

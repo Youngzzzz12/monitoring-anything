@@ -26,7 +26,7 @@ def collect_metadata(root: Path, options: dict[str, Any]) -> dict[str, Any]:
         specifications = [(item["id"], relative_file(root, item["metadata"])) for item in planned]
         result["cases"] = {"planned": len(planned), "completed": 0, "running": 0, "failed": 0, "unknown": 0}
     else:
-        specifications = [(str(p.relative_to(root)), p) for p in matching_files(root, options.get("metadataPatterns", []))]
+        specifications = [(str(p.relative_to(root.resolve())), p) for p in matching_files(root, options.get("metadataPatterns", []))]
         result["cases"] = {"planned": None, "completed": 0, "running": 0, "failed": 0, "unknown": 0}
     if not specifications:
         raise FileNotFoundError("No configured iSALE metadata records were found")

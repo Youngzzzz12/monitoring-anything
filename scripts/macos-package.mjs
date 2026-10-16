@@ -50,9 +50,11 @@ run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", app]);
 
 const python = join(resources, "python", "bin", "python3");
 if (existsSync(python)) {
-  const checked = spawnSync(python, ["-E", "-s", "-c", "import json, sqlite3, zipfile, xml.etree.ElementTree, zoneinfo; print('bundled python ok')"], { encoding: "utf8" });
-  if (checked.status !== 0) throw new Error(`The bundled Python does not run: ${checked.stderr || checked.stdout}`);
-  console.log(checked.stdout.trim());
+  /* What the app runs: the bundled Python with the bundled collector. */
+  const cli = join(resources, "collector", "tools", "cli.py");
+  const checked = spawnSync(python, ["-E", "-s", "-B", cli, "--help"], { encoding: "utf8" });
+  if (checked.status !== 0) throw new Error(`The bundled collector does not run: ${checked.stderr || checked.stdout}`);
+  console.log("bundled Python and collector run");
 }
 
 if (!process.argv.includes("--skip-dmg")) {

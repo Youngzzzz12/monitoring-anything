@@ -3,14 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-16
 
 ### Added
 - Widget as a circle: Shrink in the widget's top bar leaves only the completion ring and percentage (the focused
   project, or the average by project), the rest see-through. Hovering fans out the breakdown like a Dock stack
   (sub-projects, a paper's chapters, or the projects, each a small ring with its name) away from the screen edge; a
   click opens the widget again; drag it anywhere (its place is remembered).
-- README examples (LaTeX thesis, training run, a custom monitoring type) with screenshots from `dev/demo.html`.
+- README: examples (LaTeX thesis, training run, a custom monitoring type), the widget and the circle, dropping a folder
+  to connect it, and asking an agent; screenshots and GIFs come from `dev/demo.html`.
 
 ### Fixed
 - Built-in declarative types (Word manuscript, training run) are no longer labelled Custom.

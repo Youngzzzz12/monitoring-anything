@@ -8,9 +8,32 @@ screen.
 Your folders are only read; nothing is compiled, run or modified. Everything the app stores lives in a **workspace**,
 an ordinary folder of JSON and Markdown files.
 
-> Status: **0.1.0, early release.** Windows and macOS. Builds are not yet code-signed.
+> Status: **0.1.1, early release.** Windows and macOS. Builds are not yet code-signed.
 
 ![Overview](docs/screenshots/overall.png)
+
+## A widget that stays out of the way
+
+The floating widget keeps projects, today's writing and Next up on screen. Sections grow under the pointer like the
+macOS Dock; click a project to focus it (its sub-projects or chapters as columns), the ring or the back arrow to come
+back; tick off or add milestones without opening the main window. Idle, it fades into the background.
+
+Shrink it to a **circle** when space is short: just the completion ring, see-through around it. Hovering fans out the
+breakdown like a Dock stack; a click opens the widget again, and you can drag the circle anywhere on screen.
+
+<p>
+  <img src="docs/screenshots/widget.gif" alt="The widget: Dock-like magnification and focusing a project" width="44%">
+  &nbsp;
+  <img src="docs/screenshots/orb.gif" alt="The circle: its breakdown fans out on hover and folds back" width="44%">
+</p>
+
+## Drop a folder to connect it
+
+Drag a folder from Explorer or Finder onto the window (or onto the widget). The app recognises what it is, previews
+what it will read from the current files, and waits for you to press Connect. Drop it on a project page and it
+becomes a sub-project there.
+
+![Dropping a folder: the detected type and a preview, before anything is connected](docs/screenshots/drop-connect.gif)
 
 ## What it can follow
 
@@ -61,18 +84,6 @@ with read-only rules (globs, regexes, CSV and JSON values, log status):
 
 ![A custom type: cycles, cases and metrics from a test rig's logs](docs/screenshots/case-custom.png)
 
-### On screen while you work
-
-The floating widget shows projects, Next up and progress; focus one project to see its sub-projects or chapters, and
-complete or add milestones there. Shrink it to a **circle**, just the completion ring: hovering fans out the
-breakdown like a Dock stack, a click opens the widget again, and you can drag the circle anywhere.
-
-<p>
-  <img src="docs/screenshots/widget.png" alt="Floating widget" width="30%">
-  <img src="docs/screenshots/widget-focus.png" alt="Widget focused on one project" width="30%">
-  <img src="docs/screenshots/orb.png" alt="The widget as a circle, its breakdown fanned out on hover" width="30%">
-</p>
-
 ## Install
 
 Download the installer for your system from [Releases](../../releases) and run it. Python is bundled; nothing else is
@@ -84,13 +95,20 @@ needed. For Smart monitoring, have one of the supported agents installed (the fi
 2. **Connect** a folder you want to follow, or **New project** for an umbrella such as a thesis.
 3. Add milestones and tick them off; turn on **Live updates** and keep working as usual.
 
-## Agents
+## Ask your agent
 
-Settings → Agent → **Use Monitoring Anything from your agent** installs a skill into `~/.claude/skills/` and
-`~/.codex/skills/`; then ask Claude Code or Codex "how is my thesis going?", "add a milestone" or "track this folder".
+Settings → Agent → **Use Monitoring Anything from your agent** installs a skill for Claude Code and Codex. Then just
+ask in a chat:
+
+| You ask | The agent |
+| --- | --- |
+| "How is my thesis going?" | reads the progress: completion, Next up, overdue items, stale sources |
+| "Add *Submit to journal* due 10 Nov to Paper 1" | adds the milestone (or completes, renames, re-dates one) |
+| "Track the folder `D:\Data\TestRig`" | designs a monitoring type if none fits, then opens the plan card in the app for you to confirm |
+
 Agents work through the `ma` command line the app keeps next to its settings
-(`%APPDATA%\io.github.monitoring-anything\ma.cmd` on Windows). A new folder connection always opens in the app for you
-to confirm. The app never replaces a skill it did not install.
+(`%APPDATA%\io.github.monitoring-anything\ma.cmd` on Windows); they never run or change anything in your folders, and
+a new connection always waits for your confirmation. The app never replaces a skill it did not install.
 
 ## Development
 

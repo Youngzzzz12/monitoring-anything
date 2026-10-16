@@ -1,7 +1,9 @@
 /* The real app with a mocked backend and made-up projects, for screenshots and demos (see demo.html).
  * Query: window=widget for the floating widget, shape=orb for it as a circle, theme=dark|light, focus=<projectId> (widget). Not part of the app bundle. */
 
+import { emit } from "@tauri-apps/api/event";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
+import connectData from "./demo-connect.json";
 import type { WorkspaceSnapshot } from "../src/model/types";
 
 const params = new URLSearchParams(location.search);
@@ -102,26 +104,47 @@ const settings = {
             collapsed: params.get("shape") === "orb", orb: null },
 };
 const replies: Record<string, unknown> = {
-  get_settings: settings, update_settings: settings,
+  get_settings: settings,
   app_info: { version: "0.1.0", collectorDir: null, platform: "windows", settingsPath: "", launchedByAutostart: false },
   workspace_current: { root: "C:/Demo/Workspace", name: "Demo", created: false, meta: {} },
   watch_status: { running: true, stopping: false, error: null, startedAt: iso(-90) },
   take_requests: [], skill_status: [], python_status: { source: "bundled", path: "", version: "3.12", ok: true, error: null },
 };
 
+/* Connect a folder: what the real collector returned for a made-up LaTeX paper (dev/demo-connect.json). */
+const cli = (value: unknown) => ({ code: 0, stdout: JSON.stringify(value), stderr: "", timedOut: false, truncated: false });
+function collector(command: string, args: string[]): unknown {
+  if (command === "inspect") return connectData.inspect;
+  if (command === "plan" && args[0] === "preview") return connectData.preview;
+  if (command === "milestones" && args[0] === "list") return connectData.templates;
+  return { ok: true };
+}
+
 mockWindows(label);
 mockIPC((cmd: string, payload?: Record<string, unknown>) => {
   if (cmd === "workspace_snapshot") return snapshot();
-    if (cmd === "widget_shape") {
-    const flyout = payload?.flyout as [number, number] | null;
-    /* The fan rises up and to the right of a circle at the bottom-left of the window. */
-    return flyout ? { shape: "flyout", side: "right", vertical: "up", orbX: 0, orbY: flyout[1], width: flyout[0], height: flyout[1] + 72 }
-      : { shape: payload?.shape === "panel" ? "panel" : "orb", side: "right", vertical: "up", orbX: 0, orbY: 0, width: 72, height: 72 };
+  if (cmd === "collector_run") return cli(collector(String(payload?.command), (payload?.args as string[]) || []));
+  if (cmd === "path_kind") return "dir";
+  if (cmd === "update_settings") {
+    const patch = (payload?.patch || {}) as Record<string, unknown>;
+    Object.assign(settings, patch, patch.widget ? { widget: { ...settings.widget, ...(patch.widget as object) } } : {});
+    return settings;
+  }
+  /* The browser window does not change shape: the circle stays at the page's bottom-left and the fan rises from it. */
+  if (cmd === "widget_shape") {
+    const flyout = payload?.flyout as [number, number] | null, orbY = Math.max(0, window.innerHeight - 72);
+    return flyout ? { shape: "flyout", side: "right", vertical: "up", orbX: 0, orbY, width: flyout[0], height: flyout[1] + 72 }
+      : { shape: payload?.shape === "panel" ? "panel" : "orb", side: "right", vertical: "up", orbX: 0, orbY, width: 72, height: 72 };
   }
   if (cmd in replies) return replies[cmd];
   return null;
 }, { shouldMockEvents: true });
 
-/* The window plugin is mocked too; the main window's own frame is the browser page. */
+/* Hooks for recordings: the pointer entering or leaving the widget window, and a folder dragged onto the main window. */
+const demo = window as unknown as Record<string, unknown>;
+demo.demoPointer = (inside: boolean) => emit("widget://pointer", inside);
+demo.demoDrag = (path: string) => emit("tauri://drag-enter", { paths: [path], position: { x: 640, y: 400 } });
+demo.demoDrop = (path: string) => emit("tauri://drag-drop", { paths: [path], position: { x: 640, y: 400 } });
+
 if (label === "widget") document.documentElement.classList.add("rd-demo-widget");
 await import("../src/main");

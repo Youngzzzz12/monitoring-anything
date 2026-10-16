@@ -1,0 +1,184 @@
+{
+ "inspect": {
+  "sourcePath": "C:\\Demo\\Paper2",
+  "title": "Paper2",
+  "suggestedId": "paper2",
+  "profiles": [
+   {
+    "id": "latex-main-tex-58b7a53b",
+    "label": "LaTeX \u00b7 main.tex",
+    "kind": "latex",
+    "adapter": {
+     "mainFile": "main.tex",
+     "chapters": [
+      "main.tex",
+      "sections/introduction.tex",
+      "sections/method.tex",
+      "sections/results.tex",
+      "sections/discussion.tex",
+      "sections/conclusion.tex"
+     ],
+     "logPatterns": [
+      "main.log"
+     ]
+    },
+    "summary": [
+     "Entry: main.tex",
+     "Monitored TeX files: 6",
+     "Build log: main.log",
+     "Chapter readiness is manual; file edits and build status do not measure paper completion."
+    ],
+    "suggestedId": "paper2-latex-main-tex-58b7a53b",
+    "suggestedTitle": "Paper2 \u00b7 LaTeX \u00b7 main.tex"
+   }
+  ],
+  "candidates": [
+   {
+    "profileId": "latex-paper",
+    "title": "LaTeX paper or thesis",
+    "projectType": "paper",
+    "sourceKind": "latex",
+    "engine": "adapter",
+    "origin": "builtin",
+    "confidence": 1.0,
+    "threshold": 0.7,
+    "meetsThreshold": true,
+    "matched": [
+     "allOf: TeX source files \u2014 6 file(s)",
+     "anyOf: a TeX entry file declares \\documentclass \u2014 1 matching file(s) of 6",
+     "anyOf: a main.tex entry at the folder root \u2014 1 file(s)",
+     "existing latex inspector found 1 connectable entry"
+    ],
+    "missed": [],
+    "excluded": [],
+    "subprojectRole": "standalone",
+    "milestoneTemplate": "paper-section-draft-complete",
+    "inspectedProfileIds": [
+     "latex-main-tex-58b7a53b"
+    ],
+    "suggestedId": "paper2-latex-main-tex-58b7a53b",
+    "suggestedTitle": "Paper2 \u00b7 LaTeX \u00b7 main.tex"
+   }
+  ],
+  "warnings": [
+   "No build log exists for main.tex; edits can be observed, while build status remains unknown until main.log exists.",
+   "Literal TeX dependencies are refreshed during collection. Dynamic macro-generated includes cannot be resolved; review the paper's data warnings for coverage."
+  ]
+ },
+ "preview": {
+  "ok": true,
+  "source": "C:\\Demo\\Paper2",
+  "profileId": "latex-paper",
+  "engine": "adapter",
+  "sourceKind": "latex",
+  "projectType": "paper",
+  "adapter": {
+   "mainFile": "main.tex",
+   "chapters": [
+    "main.tex",
+    "sections/introduction.tex",
+    "sections/method.tex",
+    "sections/results.tex",
+    "sections/discussion.tex",
+    "sections/conclusion.tex"
+   ],
+   "logPatterns": [
+    "main.log"
+   ]
+  },
+  "preview": {
+   "runtime": {
+    "status": "unknown",
+    "progress": null,
+    "step": null,
+    "currentValue": null,
+    "targetValue": null,
+    "unit": null,
+    "runId": null
+   },
+   "cases": {
+    "planned": null,
+    "completed": null,
+    "running": null,
+    "failed": null,
+    "unknown": null
+   },
+   "artifacts": [],
+   "artifactCount": 0,
+   "chapters": {
+    "count": 10,
+    "topLevel": 5,
+    "leafCount": 5,
+    "totalWords": 2000,
+    "mainFile": "main.tex",
+    "countingMethod": "TeXcount 3.1.1 body words (expanded literal sources; captions and headings excluded)",
+    "titles": [
+     "Introduction",
+     "Method",
+     "Results",
+     "Discussion",
+     "Conclusion"
+    ]
+   },
+   "metrics": [],
+   "caseRecords": [],
+   "caseRecordCount": 0,
+   "build": null,
+   "sourceFileCount": 6,
+   "sourceFiles": [
+    "C:\\Demo\\Paper2\\main.tex",
+    "C:\\Demo\\Paper2\\sections\\introduction.tex",
+    "C:\\Demo\\Paper2\\sections\\method.tex",
+    "C:\\Demo\\Paper2\\sections\\results.tex",
+    "C:\\Demo\\Paper2\\sections\\discussion.tex",
+    "C:\\Demo\\Paper2\\sections\\conclusion.tex"
+   ],
+   "sourceModifiedAt": "2026-10-16T15:04:02Z",
+   "elapsedSeconds": 0.844,
+   "collectorVersion": "1.2.0"
+  },
+  "warnings": [
+   "No build log exists for main.tex; edits can be observed, while build status remains unknown until main.log exists.",
+   "Literal TeX dependencies are refreshed during collection. Dynamic macro-generated includes cannot be resolved; review the paper's data warnings for coverage."
+  ],
+  "errors": [],
+  "inspectedProfileId": "latex-main-tex-58b7a53b"
+ },
+ "templates": {
+  "milestoneTemplates": [
+   {
+    "id": "paper-section-draft-complete",
+    "title": "Paper: draft + complete for each leaf section",
+    "description": "After the first collection, adds two tasks for every leaf section of the paper (draft, complete), bound to the section with [paper::][chapter::][stage::] and grouped under the top-level chapter heading. Existing identical bindings are skipped.",
+    "mode": "per-section",
+    "appliesTo": [
+     "paper",
+     "thesis"
+    ],
+    "origin": "builtin",
+    "requiresPaperSnapshot": true,
+    "stages": [
+     "draft",
+     "complete"
+    ],
+    "taskCount": null
+   },
+   {
+    "id": "simulation-basic",
+    "title": "Simulation: basic workflow",
+    "description": "Generic simulation milestones. Existing tasks with the same title are skipped.",
+    "mode": "static",
+    "appliesTo": [
+     "simulation",
+     "experiment",
+     "other"
+    ],
+    "origin": "builtin",
+    "requiresPaperSnapshot": false,
+    "stages": null,
+    "taskCount": 5
+   }
+  ],
+  "errors": []
+ }
+}

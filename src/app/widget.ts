@@ -171,7 +171,7 @@ export class OrbControl {
   }
 
   /** Place the circle inside the window and each fan item on its curve (folded items sit on the circle). */
-  private apply(layout: OrbLayout) {
+  apply(layout: OrbLayout) {
     const style = this.frame.style, items = this.items(), half = FAN.orb / 2;
     const cx = layout.orbX + half, cy = layout.orbY + half, h = layout.side === "left" ? -1 : 1, v = layout.vertical === "down" ? 1 : -1;
     style.setProperty("--rd-orb-x", layout.orbX + "px");
@@ -253,7 +253,7 @@ export function startWidget(host: HTMLElement, store: Store): void {
   mount();
   store.subscribe(mount);
   /* A collapsed widget without a workspace has nothing to show in a circle: open the panel. A collapsed one starts closed. */
-  if (store.settings?.widget.collapsed) void api.widgetShape(store.workspace ? "orb" : "panel").catch(() => {});
+  if (store.settings?.widget.collapsed) void api.widgetShape(store.workspace ? "orb" : "panel").then(layout => { if (layout.shape !== "panel") orb.apply(layout); }).catch(() => {});
 
   const fade = new IdleFade(document.documentElement, frame,
     () => Boolean(store.settings?.widget.fadeWhenIdle && store.settings?.widget.keepOnTop),

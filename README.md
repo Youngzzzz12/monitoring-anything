@@ -9,7 +9,13 @@ an ordinary folder of JSON and Markdown files.
 
 > Status: **0.1.0, early release.** Windows and macOS. Builds are not yet code-signed.
 
-<!-- Screenshots: docs/screenshots/overall.png, project.png, widget.png -->
+![Overview](docs/screenshots/overall.png)
+
+<p>
+  <img src="docs/screenshots/project.png" alt="A paper project: structure, chapter progress and writing activity" width="58%">
+  <img src="docs/screenshots/widget.png" alt="Floating widget" width="19%">
+  <img src="docs/screenshots/widget-focus.png" alt="Widget focused on one project" width="19%">
+</p>
 
 ## Features
 
@@ -56,7 +62,8 @@ npm run tauri build     # installers in src-tauri/target/release/bundle/
 ```
 
 `src/` is the interface (TypeScript), `src-tauri/` the desktop shell (Rust), `collector/` the Python collector that
-reads folders, `skill/` the agent skill. Workspace file formats: [`schemas/README.md`](schemas/README.md).
+reads folders, `skill/` the agent skill. `dev/demo.html` (with `npm run dev`) shows the app with made-up projects;
+the screenshots come from it. Workspace file formats: [`schemas/README.md`](schemas/README.md).
 
 ## License
 

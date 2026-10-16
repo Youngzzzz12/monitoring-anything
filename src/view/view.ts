@@ -163,7 +163,7 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
   const titles: Record<string, string> = {
     overview: "Overall", attention: "Needs attention", projects: "Projects", "project-overview": "Project overview",
     milestones: "Milestones", runs: "Live monitor", resources: "Results & resources",
-    health: "Data health", paper: "Paper workspace", "paper-progress": "Progress", mini: "Research",
+    health: "Data health", paper: "Paper workspace", "paper-progress": "Progress", mini: "All projects",
   };
   function el<K extends keyof HTMLElementTagNameMap>(parent: Element, tag: K, text?: unknown, className?: string | null): HTMLElementTagNameMap[K] {
     const node = documentRef.createElement(tag);
@@ -1180,7 +1180,7 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
   function renderOverview(projects: Project[]) {
     const sources = projects.flatMap(project => project.sources);
     const counts = attentionCounts(attention(projects));
-    description.textContent = sources.filter(source => runtime(source).status === "running").length + " running sources · " + counts.alerts + " alerts" + (counts.suggestions ? " · " + plural(counts.suggestions, "suggestion") : "");
+    description.textContent = plural(sources.filter(source => runtime(source).status === "running").length, "running source") + " · " + plural(counts.alerts, "alert") + (counts.suggestions ? " · " + plural(counts.suggestions, "suggestion") : "");
     clear(headerActions); renderActions(headerActions!);
     const bento = el(content, "div", null, "rd-overview-bento");
     projectProgressChart(bento, projects);
@@ -1195,7 +1195,7 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
   function renderAttention(projects: Project[]) {
     const items = attention(projects), counts = attentionCounts(items);
     const affected = new Set(items.filter(item => item.state !== "suggestion").map(item => item.project.id)).size;
-    description.textContent = counts.alerts + " alerts · " + (counts.suggestions ? plural(counts.suggestions, "suggestion") : affected + " " + (affected === 1 ? "project" : "projects") + " affected");
+    description.textContent = plural(counts.alerts, "alert") + " · " + (counts.suggestions ? plural(counts.suggestions, "suggestion") : affected + " " + (affected === 1 ? "project" : "projects") + " affected");
     if (!items.length && !model.errors.length) { empty(content, "No current alerts", projects.length ? "Sources and priorities are checked independently." : "Alerts appear after a project is connected."); return; }
     const list = el(content, "ul", null, "rd-list rd-alert-list");
     /* Suggestions for one parent stay together; more than two fold into one row. */
@@ -1913,7 +1913,7 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     catch (error) { record.miniPush = null; actionMessage = String((error as Error).message || error); }
     if (!record.disposed) void refresh(true);
   }
-  /* The title: "Research" for all projects. Focused: a back line ("‹ PhD thesis" or "‹ All projects") beside the actions,
+  /* The title: "All projects" for all projects. Focused: a back line ("‹ PhD thesis" or "‹ All projects") beside the actions,
    * and the project's name on its own line below, across the whole width (up to two lines). */
   function miniFocusHeading(focus: Project | null) {
     for (const node of record.focusHeading || []) node.remove();

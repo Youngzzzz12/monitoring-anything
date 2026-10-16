@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.3] - 2026-10-17
+
+### Fixed
+- Installed agents (Claude Code, Codex, Gemini CLI) showed as not found when the app was started from the Dock, Finder
+  or Explorer: GUI apps do not get a terminal's PATH. The app now widens its PATH at start (the login shell's PATH on
+  macOS and Linux, the current registry PATH on Windows, plus the usual npm, Homebrew, ~/.local/bin and Claude Code
+  installer folders), so agents are found and Node-based CLIs can start.
+- macOS: every executable and library in the app is signed (ad hoc) and verified; the dmg uses LZMA compression.
+
 ## [0.2.2] - 2026-10-17
 
 ### Added

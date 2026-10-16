@@ -2281,6 +2281,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tempfile",
  "which",
+ "winreg",
 ]
 
 [[package]]

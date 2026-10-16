@@ -3,6 +3,7 @@
 
 mod agent;
 mod collector;
+mod envpath;
 mod fsutil;
 mod fswatch;
 mod settings;
@@ -484,6 +485,8 @@ pub(crate) fn quit(app: &AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Before anything starts a thread: agents and the collector inherit a PATH like a terminal's (see envpath.rs).
+    envpath::widen();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| match request_from_args(&args) {
             Some(request) => deliver_request(app, request),

@@ -1,6 +1,6 @@
 [package]
 name = "monitoring-anything"
-version = "0.2.2"
+version = "0.2.3"
 description = "Monitoring Anything: projects, milestones and live progress monitoring"
 authors = ["Yang"]
 license = "GPL-3.0-only"
@@ -29,6 +29,9 @@ notify-debouncer-mini = "0.7"
 which = "8"
 iana-time-zone = "0.1"
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
 
 [dev-dependencies]
 tempfile = "3"

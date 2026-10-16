@@ -30,25 +30,21 @@ const published = path => basename(path).replace(/ /g, "-");
 
 mkdirSync(out, { recursive: true });
 const platforms = {};
-const add = (platform, bundle) => {
+/* Copy an update bundle under its published name and record its signature and download address. */
+const add = (platform, bundle, name) => {
   if (!bundle) { console.warn(`No update bundle for ${platform}`); return; }
   if (!existsSync(bundle + ".sig")) throw new Error(`${basename(bundle)} has no .sig: was TAURI_SIGNING_PRIVATE_KEY set for the build?`);
-  if (!basename(bundle).includes(`_${version}_`)) throw new Error(`${basename(bundle)} is not version ${version}`);
-  copyFileSync(bundle, join(out, published(bundle)));
-  platforms[platform] = { signature: readFileSync(bundle + ".sig", "utf8").trim(), url: `${repo}/releases/download/v${version}/${encodeURIComponent(published(bundle))}` };
+  copyFileSync(bundle, join(out, name));
+  platforms[platform] = { signature: readFileSync(bundle + ".sig", "utf8").trim(), url: `${repo}/releases/download/v${version}/${encodeURIComponent(name)}` };
 };
-add("windows-x86_64", find(name => name.endsWith("-setup.exe") && name.includes(`_${version}_`)));
-add("darwin-aarch64", find(name => name.endsWith(".app.tar.gz") && name.includes("aarch64")) ||
-                      find(name => name.endsWith(".app.tar.gz")));
+const setup = find(name => name.endsWith("-setup.exe") && name.includes(`_${version}_`));
+add("windows-x86_64", setup, setup && published(setup));
+/* Tauri names the macOS update bundle after the app only; publish it with the version and architecture like the dmg. */
+add("darwin-aarch64", find(name => name.endsWith(".app.tar.gz")), `Monitoring-Anything_${version}_aarch64.app.tar.gz`);
 const dmg = find(name => name.endsWith(".dmg") && name.includes(`_${version}_`));
 if (dmg) copyFileSync(dmg, join(out, published(dmg)));
-if (platforms["darwin-aarch64"] && !published(platforms["darwin-aarch64"].url).includes("aarch64")) {
-  /* Tauri names the macOS update bundle after the app only; give it the architecture like the dmg. */
-  const plain = all.find(path => basename(path).endsWith(".app.tar.gz"));
-  const named = `Monitoring-Anything_${version}_aarch64.app.tar.gz`;
-  copyFileSync(plain, join(out, named));
-  platforms["darwin-aarch64"].url = `${repo}/releases/download/v${version}/${named}`;
-}
+else console.warn(`No ${version} dmg`);
+if (!setup) console.warn(`No ${version} Windows installer`);
 const manifest = { version, notes, pub_date: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), platforms };
 writeFileSync(join(out, "latest.json"), JSON.stringify(manifest, null, 2) + "\n");
 for (const name of readdirSync(out)) console.log(`${name}  ${(statSync(join(out, name)).size / 1048576).toFixed(1)} MB`);

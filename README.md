@@ -8,7 +8,7 @@ screen.
 Your folders are only read; nothing is compiled, run or modified. Everything the app stores lives in a **workspace**,
 an ordinary folder of JSON and Markdown files.
 
-> Status: **0.1.1, early release.** Windows and macOS. Builds are not yet code-signed.
+> Status: **0.2.0, early release.** Windows and macOS. Builds are not yet code-signed.
 
 ![Overview](docs/screenshots/overall.png)
 

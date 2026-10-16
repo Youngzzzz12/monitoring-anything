@@ -54,6 +54,10 @@
       "../skill/monitoring-anything/SKILL.md": "skill/monitoring-anything/SKILL.md",
       "../LICENSE": "LICENSE"
     },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "12.0"
+    },
     "windows": {
       "nsis": {
         "installMode": "currentUser"

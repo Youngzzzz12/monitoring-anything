@@ -212,7 +212,7 @@ class OnboardingTests(unittest.TestCase):
         current = read_json(local)
         self.assertEqual(current["aliases"]["old-project"], existing["aliases"]["old-project"])
         self.assertEqual(current["extra"], "preserved")
-        self.assertEqual(current["aliases"]["trial"], str(self.source))
+        self.assertEqual(current["aliases"]["trial"], str(self.source.resolve()))
         after = {path.relative_to(self.source).as_posix(): path.read_bytes() for path in self.source.rglob("*") if path.is_file()}
         self.assertEqual(before, after)
 

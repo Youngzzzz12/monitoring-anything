@@ -2,6 +2,7 @@
  * Record and milestone edits are validated here (ported rules) and written by the Rust side with compare-and-swap;
  * project creation, connection, collection and cleanup run through the bundled Python collector. */
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask as askDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { hierarchyItems } from "../model/load";
 import { paperBinding, type PaperBinding, type SetMilestoneRequest } from "../model/milestones";
@@ -391,6 +392,12 @@ export class AppActions implements ActionBridge {
 
   async openSettings(): Promise<void> { this.shell.openSettings(); }
   async importVault(): Promise<void> { this.shell.importVault(); }
-  async toggleWidget(): Promise<void> { await api.widgetSetVisible(!this.store.settings?.widget.visible); }
+  /** Showing the widget switches to it: the main window goes to the tray (the widget's open button or the tray icon
+   * brings it back). Hiding the widget from here leaves the main window as it is. */
+  async toggleWidget(): Promise<void> {
+    const show = !this.store.settings?.widget.visible;
+    await api.widgetSetVisible(show);
+    if (show) await getCurrentWindow().hide();
+  }
   async revealWorkspace(): Promise<void> { if (this.store.workspace) await api.revealPath(this.store.workspace.root); }
 }

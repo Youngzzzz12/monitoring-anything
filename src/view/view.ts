@@ -556,7 +556,8 @@ export function mountView(container: HTMLElement, input: ViewInput, ctx: ViewCon
     createButton(actions, "New project");
     add(state.running ? "Stop live updates" : "Start live updates", state.running ? "stop" : "start", state.busy);
     iconAction("Collect now", state.running ? "Live updates already collect as files change" : "Read every connected folder once", "collect", "refresh", state.busy || state.running);
-    if (bridge.toggleWidget) iconAction(state.widgetVisible ? "Hide floating widget" : "Show floating widget", "Progress at a glance, beside your work", "toggleWidget", "widget", false, Boolean(state.widgetVisible));
+    if (bridge.toggleWidget) iconAction(state.widgetVisible ? "Hide floating widget" : "Switch to the widget", state.widgetVisible ? "The main window stays open"
+      : "This window goes to the tray; the widget's open button or the tray icon brings it back", "toggleWidget", "widget", false, Boolean(state.widgetVisible));
     if (bridge.openSettings) iconAction("Settings", "Ctrl+,", "openSettings", "settings", false);
     el(parent, "span", state.running ? "Live updates · Running" : "Live updates · Stopped", "rd-live-state" + (state.running ? " is-running" : ""));
     if (state.error) el(parent, "p", `Last action: ${state.error}`, "rd-caption");

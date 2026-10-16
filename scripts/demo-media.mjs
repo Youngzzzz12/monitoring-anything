@@ -40,8 +40,11 @@ const openProject = title => async page => {
 const SCREENSHOTS = [
   { name: "overall", query: "?theme=light" },
   { name: "project", query: "?theme=light", prepare: openProject("Project A1") },
-  { name: "case-training", query: "?theme=light", prepare: openProject("Project B") },
-  { name: "case-custom", query: "?theme=light", prepare: openProject("Project E") },
+  { name: "case-training", query: "?theme=light", prepare: openProject("Project A3") },
+  { name: "case-custom", query: "?theme=light", prepare: openProject("Project B1") },
+  /* Projects within projects: the overall list (each family with sub-projects of any type) and a parent's page. */
+  { name: "family", query: "?theme=light", element: '.rd-app-panel[data-mode="projects"]', viewport: { width: 1280, height: 1400 } },
+  { name: "parent", query: "?theme=light", prepare: openProject("Project A") },
 ];
 
 const SCENES = [
@@ -62,18 +65,18 @@ const SCENES = [
     await page.locator(".rd-mini-back").click();
     await sleep(1400);
   } },
-  { name: "orb", query: "?window=widget&shape=orb&theme=light&focus=project-a", size: { width: 300, height: 230 }, scheme: "light", play: async page => {
+  { name: "orb", query: "?window=widget&shape=orb&theme=light&focus=project-a", size: { width: 300, height: 310 }, scheme: "light", play: async page => {
     await page.addStyleTag({ content: backdrop });
     await page.mouse.move(290, 10);
     await sleep(700);
-    await glide(page, [290, 10], [36, 194], 600);
+    await glide(page, [290, 10], [36, 274], 600);
     await sleep(1300);
-    await glide(page, [36, 194], [110, 110], 500);
+    await glide(page, [36, 274], [110, 190], 500);
     await sleep(700);
-    await glide(page, [110, 110], [290, 220], 400);
+    await glide(page, [110, 190], [290, 300], 400);
     await page.evaluate(() => window.demoPointer(false));
     await sleep(1100);
-    await glide(page, [290, 220], [40, 190], 500);
+    await glide(page, [290, 300], [40, 270], 500);
     await sleep(1400);
   } },
   { name: "drop", query: "?theme=light", size: { width: 1100, height: 700 }, scheme: "light", scale: 1, play: async page => {
@@ -86,13 +89,15 @@ const SCENES = [
 ];
 
 async function screenshot(browser, base, shot) {
-  const page = await browser.newPage({ viewport: desktop, deviceScaleFactor: 2, colorScheme: "light" });
+  const page = await browser.newPage({ viewport: shot.viewport || desktop, deviceScaleFactor: 2, colorScheme: "light" });
   await page.goto(base + shot.query);
   await page.waitForTimeout(2500);
   if (shot.prepare) await shot.prepare(page);
   await page.mouse.move(0, 0);
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: join(root, "docs", "screenshots", shot.name + ".png") });
+  const target = join(root, "docs", "screenshots", shot.name + ".png");
+  if (shot.element) await page.locator(shot.element).first().screenshot({ path: target });
+  else await page.screenshot({ path: target });
   await page.close();
   console.log("screenshot", shot.name);
 }

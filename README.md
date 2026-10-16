@@ -12,6 +12,23 @@ an ordinary folder of JSON and Markdown files.
 
 ![Overview](docs/screenshots/overall.png)
 
+## Projects within projects
+
+Group work the way it actually happens. A top-level project (a thesis, a grant, a test campaign) holds sub-projects,
+and **each sub-project can be any kind of work**: a LaTeX paper next to a Word report, a training run, a simulation
+batch, a custom-type experiment, or just a list of milestones with no folder at all. The parent's progress counts its
+own milestones and every sub-project's, so the thesis ring moves when any paper or run moves.
+
+<p>
+  <img src="docs/screenshots/family.png" alt="The project list: Project A with a LaTeX paper, a Word report, a training run and a simulation; Project B with a custom-type experiment and a milestones-only sub-project" width="40%">
+  &nbsp;
+  <img src="docs/screenshots/parent.png" alt="A parent project's page: progress across its four sub-projects of different types" width="56%">
+</p>
+
+Drop a folder on a project's page to add it as a sub-project, drag a row onto a project to file it there, or give a
+project a discovery folder and new subfolders are suggested as sub-projects. The widget can focus one project and
+show its sub-projects as columns. (One level deep: a sub-project does not have sub-projects of its own.)
+
 ## A widget that stays out of the way
 
 The floating widget keeps projects, today's writing and Next up on screen. Sections grow under the pointer like the
@@ -104,8 +121,8 @@ needed. For Smart monitoring, have one of the supported agents installed (the fi
 
 ## Ask your agent
 
-Settings → Agent → **Use Monitoring Anything from your agent** installs a skill for Claude Code and Codex. Then just
-ask in a chat:
+On first start the app installs a skill for the agents it finds (Claude Code, Codex); remove or reinstall it under
+Settings → Agent. Then just ask in a chat:
 
 | You ask | The agent |
 | --- | --- |

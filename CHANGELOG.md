@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- First start installs the agent skill for the agents found (Claude Code, Codex) that have none yet; the guide says so
+  and Remove undoes it. A skill set up elsewhere is still left alone.
+- README: projects within projects (sub-projects of any type), with the demo reorganised into two families.
+
 ## [0.2.0] - 2026-10-16
 
 ### Changed

@@ -35,3 +35,6 @@ __pycache__/
 
 # Bundled Python runtime (scripts/fetch-python.mjs)
 /src-tauri/python/
+
+# README media recordings (scripts/demo-media.mjs)
+/.demo-media/

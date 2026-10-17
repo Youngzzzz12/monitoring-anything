@@ -1,8 +1,9 @@
 name: Build and test
 
-# Manual for now; releases (signing, notarisation, publishing) are a later milestone.
+# Run by hand (Actions -> Build and test), or by the release workflow when a version tag is pushed.
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build:

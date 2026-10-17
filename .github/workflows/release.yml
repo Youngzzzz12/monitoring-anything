@@ -1,0 +1,40 @@
+name: Release
+
+# Push a version tag (vX.Y.Z, matching src-tauri/tauri.conf.json) to publish a release: the build workflow tests and
+# builds Windows and macOS with signed update bundles, then this job collects the installers, writes latest.json (what
+# installed apps check for updates) and creates the GitHub release with the CHANGELOG section as its notes.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the tag matches the app version
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the app version $version (src-tauri/tauri.conf.json)." >&2
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Prepare the release files and latest.json
+        run: node scripts/release-assets.mjs artifacts out --notes-file release-notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/* --title "Monitoring Anything ${GITHUB_REF_NAME#v}" --notes-file release-notes.md --verify-tag

@@ -3,7 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.1] - 2026-10-17
+
+### Added
+- Releases publish themselves: pushing a version tag runs the release workflow, which tests and builds Windows and
+  macOS, signs the update bundles, writes `latest.json` and creates the GitHub release with this changelog section.
 
 ### Fixed
 - Force-quitting the app left the collector (live updates) running. On Windows the collector, live updates and agent

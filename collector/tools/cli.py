@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -161,6 +162,20 @@ def collect(vault: Path, configs: list[dict], host: str) -> tuple[list[dict], bo
             failed = True
             results.append({"projectId": config["projectId"], "error": str(error)})
     return results, failed
+
+
+def parent_pid() -> int | None:
+    """The app's process id when the app started this process (RD_PARENT_PID)."""
+    try:
+        return int(os.environ.get("RD_PARENT_PID", "")) or None
+    except ValueError:
+        return None
+
+
+def parent_gone(expected: int | None) -> bool:
+    """True when the app that started this process has exited (macOS, Linux: the process was re-parented). On Windows the
+    app's job object ends its children instead."""
+    return bool(expected) and os.name != "nt" and os.getppid() != expected
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -332,7 +347,11 @@ def main(argv: list[str] | None = None) -> int:
         schedules: dict[str, SavedChangeSchedule] = {}
         next_heartbeat = 0.0
         print(f"Foreground watch on {args.host_id}; Ctrl-C stops collection.", file=sys.stderr)
+        parent = parent_pid()
         while True:
+            if parent_gone(parent):
+                print("The app that started live updates has exited; stopping.", file=sys.stderr)
+                return 0
             configs = active_configurations(vault, args.project)
             owned = [config for config in configs if config["collector"]["hostId"] == args.host_id]
             active_ids = {config["projectId"] for config in owned}

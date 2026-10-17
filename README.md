@@ -171,6 +171,9 @@ npm test                # frontend tests; also npm run test:rust and npm run tes
 npm run tauri build     # installers in src-tauri/target/release/bundle/
 ```
 
+A local `npm run tauri build` signs the update bundle too: set `TAURI_SIGNING_PRIVATE_KEY` (the updater key) and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, or set `bundle.createUpdaterArtifacts` to false for an unsigned test build.
+
 `src/` is the interface (TypeScript), `src-tauri/` the desktop shell (Rust), `collector/` the Python collector that
 reads folders, `skill/` the agent skill. Workspace file formats: [`schemas/README.md`](schemas/README.md).
 

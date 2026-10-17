@@ -155,5 +155,20 @@ class WatcherTests(unittest.TestCase):
                 child.stderr.close()
 
 
+
+class ParentCheckTests(unittest.TestCase):
+    def test_live_updates_stop_when_the_app_is_gone(self) -> None:
+        import cli
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"RD_PARENT_PID": "4242"}):
+            self.assertEqual(cli.parent_pid(), 4242)
+        with mock.patch.dict(os.environ, {"RD_PARENT_PID": "x"}):
+            self.assertIsNone(cli.parent_pid())
+        self.assertFalse(cli.parent_gone(None))
+        with mock.patch.object(cli.os, "getppid", return_value=1):
+            self.assertEqual(cli.parent_gone(4242), os.name != "nt")
+        with mock.patch.object(cli.os, "getppid", return_value=4242):
+            self.assertFalse(cli.parent_gone(4242))
+
 if __name__ == "__main__":
     unittest.main()

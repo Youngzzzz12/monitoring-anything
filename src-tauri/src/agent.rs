@@ -178,6 +178,7 @@ fn run(runner: &Runner, action: &str, input: &str, timeout: Duration, cancelled:
         command.process_group(0);
     }
     let mut child = command.spawn().map_err(|e| format!("Python could not be started ({}): {e}", runner.python.display()))?;
+    crate::procjob::contain(&child);
     if let Some(mut stdin) = child.stdin.take() {
         let payload = input.as_bytes().to_vec();
         thread::spawn(move || {

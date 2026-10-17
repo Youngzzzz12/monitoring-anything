@@ -2348,7 +2348,7 @@ dependencies = [
 
 [[package]]
 name = "monitoring-anything"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "iana-time-zone",
  "keyring",
@@ -2366,6 +2366,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tempfile",
  "which",
+ "windows-sys 0.59.0",
  "winreg",
 ]
 

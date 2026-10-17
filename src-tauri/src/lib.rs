@@ -4,6 +4,7 @@
 mod agent;
 mod collector;
 mod envpath;
+mod procjob;
 mod fsutil;
 mod fswatch;
 mod settings;

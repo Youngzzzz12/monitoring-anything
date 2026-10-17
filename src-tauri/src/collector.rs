@@ -119,6 +119,8 @@ pub fn base_command(program: &Path) -> Command {
         .env("PYTHONIOENCODING", "utf-8")
         .env("PYTHONDONTWRITEBYTECODE", "1")
         .env_remove("RD_LAYOUT")
+        // Live updates stop when this process is gone (cli.py watch; see procjob.rs).
+        .env("RD_PARENT_PID", std::process::id().to_string())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -166,6 +168,7 @@ pub fn run_bounded(program: &Path, args: &[String], input: Option<&str>, timeout
         cmd.stdin(Stdio::piped());
     }
     let mut child = cmd.spawn().map_err(|e| format!("Python could not be started ({}): {e}", program.display()))?;
+    crate::procjob::contain(&child);
     if let (Some(text), Some(mut stdin)) = (input, child.stdin.take()) {
         let payload = text.as_bytes().to_vec();
         thread::spawn(move || {
@@ -342,6 +345,7 @@ impl CollectorState {
         let mut cmd = base_command(&runner.python);
         cmd.args(runner.args(&["watch".into()])).current_dir(&runner.workspace);
         let mut child = cmd.spawn().map_err(|e| format!("Live updates could not start: {e}"))?;
+        crate::procjob::contain(&child);
         let stdout = child.stdout.take().expect("stdout piped");
         let stderr = child.stderr.take().expect("stderr piped");
         let id = self.sequence.fetch_add(1, Ordering::SeqCst) + 1;
